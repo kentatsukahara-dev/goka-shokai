@@ -57,7 +57,7 @@ label{display:grid;gap:4px;font-size:13px;color:var(--mute)}
 .res b{display:block;font-size:20px;font-family:var(--disp)}
 .res span{font-size:11.5px}
 .r-wood{background:var(--wood)}.r-stone{background:var(--stone)}.r-iron{background:var(--iron)}.r-coal{background:var(--coal);color:#fff}.r-cotton{background:var(--cotton)}.r-food{background:var(--food)}.r-copper{background:var(--copper);color:#fff}.r-salt{background:var(--salt)}
-.dice{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.dice b{min-width:42px;height:42px;padding:0 6px;display:grid;place-items:center;border-radius:6px;background:var(--paper);color:#17222a;font-family:var(--disp);font-size:18px}.town{display:grid;gap:6px;padding-top:8px;border-top:1px solid var(--sea3)}
+.dice{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.dice b{min-width:52px;height:42px;padding:0 6px;display:grid;place-items:center;border-radius:6px;background:var(--paper);color:#17222a;font-family:var(--disp);font-size:18px}.town{display:grid;gap:6px;padding-top:8px;border-top:1px solid var(--sea3)}
 .acts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
 .acts .wide{grid-column:1/-1}
 .cardrow{display:flex;flex-wrap:wrap;gap:6px}
@@ -94,7 +94,9 @@ label{display:grid;gap:4px;font-size:13px;color:var(--mute)}
 .big{font-family:var(--disp);font-size:56px;text-align:center;color:var(--brass);line-height:1.1}
 .pulse{animation:pulse 1.3s ease-in-out infinite}
 @keyframes pulse{50%{opacity:.35}}
-@media (prefers-reduced-motion:reduce){.pulse{animation:none}}
+@keyframes tumble{0%,50%,100%{transform:translateY(0) rotate(0)}25%{transform:translateY(-7px) rotate(10deg)}75%{transform:translateY(-4px) rotate(-10deg)}}
+.dice.rolling b{animation:tumble .32s linear infinite}.dice.rolling b:nth-child(2){animation-delay:-.08s}.dice.rolling b:nth-child(3){animation-delay:-.16s}.dice.rolling b:nth-child(4){animation-delay:-.24s}
+@media (prefers-reduced-motion:reduce){.pulse,.dice.rolling b{animation:none}}
 @media (max-width:820px){
   .title{grid-template-columns:minmax(0,1fr)}
   .title svg{max-width:280px;margin:0 auto;order:-1}
@@ -531,7 +533,7 @@ function tick(){
   if(s===null||s===undefined)return;
   const a=cpuAct(G,s),e=apply(G,s,a);
   if(e&&s===G.cur&&!G.offer)apply(G,s,G.phase==='roll'?{t:'roll'}:{t:'end'});
-  NET.nextCpu=Date.now()+(a.t==='respond'?300:a.t==='earn'?100:750);save();render()}
+  NET.nextCpu=Date.now()+(a.t==='respond'?300:a.t==='earn'?100:a.t==='roll'||a.k==='forecast'?1500:750);save();render()}
 function leave(){
   clearInterval(NET.wait);if(NET.unsub){NET.unsub();NET.unsub=null}
   if(NET.gr){NET.gr.leave().catch(()=>{});NET.gr=null}
@@ -550,7 +552,7 @@ function boardSvg(g,opt={}){
   const B=getB(),my=opt.seat,mode=opt.mode,xy=n=>[B.nodes[n].x,B.nodes[n].y],K='#140e20';
   const cellP=f=>'M'+B.faces[f].poly.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join('L')+'Z';
   const eP=e=>{const[a,b]=B.edges[e];return`M${xy(a).map(v=>v.toFixed(1))}L${xy(b).map(v=>v.toFixed(1))}`};
-  const rolled=g.dA!==null,hit=i=>rolled&&(g.faces[i]===RES[g.dB-1]||g.faces[i]===RES[g.dD-1])&&(g.nums[i]===g.dA||g.nums[i]===g.dC);let h='';
+  const rolled=g.dA!==null&&!(UI.roll>Date.now()),hit=i=>rolled&&(g.faces[i]===RES[g.dB-1]||g.faces[i]===RES[g.dD-1])&&(g.nums[i]===g.dA||g.nums[i]===g.dC);let h='';
   B.faces.forEach((f,i)=>{const t=g.faces[i],ink=t==='coal'||t==='waste'||t==='copper'?'#f3eee2':K,x=f.cx.toFixed(1),y=f.cy;
     h+=`<path d="${cellP(i)}" fill="var(--${t})" fill-opacity="${rolled&&!hit(i)?.86:1}" stroke="${K}" stroke-width="2.5" stroke-linejoin="round"/>`;
     const T=(yy,sz,tx)=>`<text x="${x}" y="${yy.toFixed(1)}" text-anchor="middle" dominant-baseline="central" font-size="${sz.toFixed(1)}" font-family="var(--disp)" font-weight="800" fill="${ink}">${tx}</text>`;
@@ -575,8 +577,15 @@ function boardSvg(g,opt={}){
   return`<svg class="board" viewBox="${-W} ${-T} ${2*W} ${T+D}" role="img" aria-label="正五角形の地図、${B.faces.length}マス">${h}</svg>`}
 
 /* --- 画面 --- */
+function diceFaces(g,spin){const z=n=>Math.floor(Math.random()*n);return spin?[RN[RES[z(8)]],RN[RES[z(8)]],1+z(6),1+z(6)]:[RN[RES[g.dB-1]],RN[RES[g.dD-1]],g.dA,g.dC]}
+/* 新しい出目を見つけたら0.9秒だけ転がす。再描画されても止まらないよう、時間で管理する */
+function diceFx(){if(!G||UI.screen!=='game')return;const k=G.dA!==null?G.tick:null,was=UI.dk;UI.dk=k;
+  if(k===null||k===was||was===undefined||matchMedia('(prefers-reduced-motion:reduce)').matches)return;
+  UI.roll=Date.now()+900;clearInterval(UI.dt);UI.dt=setInterval(()=>{const on=UI.roll>Date.now(),el=document.querySelector('.dice');
+    if(el&&G&&G.dA!==null){const f=diceFaces(G,on);el.querySelectorAll('b').forEach((b,i)=>{b.textContent=f[i]})}
+    if(!on){clearInterval(UI.dt);el?.classList.remove('rolling');soft()}},80)}
 function render(){
-  $('app').innerHTML=UI.screen==='game'&&G?gameView():UI.screen==='lobby'?lobbyView():UI.screen==='rules'?rulesView():titleView();
+  diceFx();$('app').innerHTML=UI.screen==='game'&&G?gameView():UI.screen==='lobby'?lobbyView():UI.screen==='rules'?rulesView():titleView();
   miniDraw();const sc=!!G&&UI.screen==='game'&&G.phase==='block'&&seatOf()===G.cur;if(sc&&!UI.sc)toBoard();UI.sc=sc}
 function toBoard(){if(window.innerWidth<=820)document.querySelector('.board')?.scrollIntoView({behavior:'smooth',block:'start'})}
 function soft(){const a=document.activeElement;if(a&&(a.tagName==='INPUT'||a.tagName==='SELECT'))return;render()}
@@ -636,7 +645,7 @@ function gameView(){
   h+=`<div class="prompt" style="--who:${PC[g.cur]}"><b>${esc(t1)}</b>${t2?`<p class="sub">${esc(t2)}</p>`:''}${UI.toast?`<p class="err">${esc(UI.toast)}</p>`:''}</div>`;
   if(g.offer&&me!==null&&me!==g.offer.from&&!g.offer.no.includes(me)){const can=canPay(p,g.offer.want);
     h+=`<div class="offer"><b>${esc(g.pl[g.offer.from].name)}からの提案</b><p>もらう：${esc(bagTxt(g.offer.give))}<br>渡す：${esc(bagTxt(g.offer.want))}</p><div class="row"><button class="btn main grow" data-a="yes" ${can?'':'disabled'}>${can?'取引する':'足りません'}</button><button class="btn grow" data-a="no">断る</button></div></div>`}
-  if(g.dA!==null)h+=`<div class="dice"><b>${RN[RES[g.dB-1]]}</b><b>${RN[RES[g.dD-1]]}</b><b>${g.dA}</b><b>${g.dC}</b>${g.dA===g.dC?'<span class="sub">ゾロ目</span>':''}</div>`;
+  if(g.dA!==null){const sp=UI.roll>Date.now();h+=`<div class="dice ${sp?'rolling':''}">${diceFaces(g,sp).map(v=>`<b>${v}</b>`).join('')}${!sp&&g.dA===g.dC?'<span class="sub">ゾロ目</span>':''}</div>`}
   if(p)h+=`<div class="purse"><span class="sub">所持金</span><b>${p.hand.money}</b></div><div class="hand">${RES.map(r=>`<div class="res r-${r}"><b>${p.hand[r]}</b><span>${RN[r]}</span></div>`).join('')}</div>`;
   if(mine&&g.phase==='roll')h+=`<button class="btn main" data-a="roll">サイコロを振る</button>`;
   if(mine&&g.offer)h+=`<button class="btn" data-a="cancel">提案を取り下げる</button>`;
