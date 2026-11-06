@@ -116,7 +116,7 @@ const COST={dirt:{wood:1},rail:{stone:1,iron:1},upg:{coal:1},take:{stone:1,iron:
 const LIMIT={line:24,hut:6,st:4,fac:3,deed:2,boost:2,ord:3},YIELD={h:1,s:2,o:3};
 const AP=3,ITEM=25,ORDER_PAY=5,ZORO=3,ZORO3=8,MINI_GAP=10;
 const CARD={survey:{n:'測量隊',d:'通行止めを好きなマスへ動かし、そばの相手から物資を1つもらう',c:8},
-  forecast:{n:'天気読み',d:'振る前に使い、番号のサイコロ1個の目を1〜6から選ぶ。残りは普通に振る',c:4},
+  forecast:{n:'天気読み',d:'振る前に使い、番号のサイコロ1個と物資のサイコロ1個の目を選ぶ。残りは普通に振る',c:4},
   import:{n:'緊急輸入',d:'好きな物資を2つもらう',c:3},
   bond:{n:'鉄道債',d:'線路を2本、行動を使わずただで敷く',c:2},
   secret:{n:'隠し資産',d:'持っているだけで1点。最後まで相手には見えない',c:3}};
@@ -308,12 +308,12 @@ function step(G,seat,p,a){
   case'mg':{if(!main)return'今は遊べません';return mgStep(G,p,a)}
   case'play':{const i=p.cards.findIndex(c=>c.k===a.k&&c.t<G.tick);if(i<0||a.k==='secret')return'使える契約書がありません';if(G.played)return'契約書は1手番に1枚です';
     if(!main&&G.phase!=='roll')return'今は使えません';
-    if(a.k==='forecast'){if(G.phase!=='roll')return'天気読みは振る前に使います';if(!Number.isInteger(a.d)||a.d<1||a.d>6)return'番号を選んでください'}
+    if(a.k==='forecast'){if(G.phase!=='roll')return'天気読みは振る前に使います';if(!Number.isInteger(a.d)||a.d<1||a.d>6)return'番号を選んでください';if(!RES.includes(a.r))return'物資を選んでください'}
     if(a.k==='import'&&(!Array.isArray(a.r)||a.r.length!==2||!a.r.every(r=>RES.includes(r))))return'物資を選んでください';
     if(a.k==='bond'&&(!main||lines(G,seat)>=LIMIT.line))return'今は使えません';
     p.cards.splice(i,1);G.played=true;log(G,`${p.name}が「${CARD[a.k].n}」を使った`);
     if(a.k==='survey'){G.back=G.phase;G.phase='block'}
-    else if(a.k==='forecast')doRoll(G,a.d,die(),die8(),die8());
+    else if(a.k==='forecast')doRoll(G,a.d,die(),RES.indexOf(a.r)+1,die8());
     else if(a.k==='import')a.r.forEach(r=>p.hand[r]++);
     else if(a.k==='bond')G.bridge=Math.min(2,LIMIT.line-lines(G,seat));
     return null}
@@ -393,7 +393,7 @@ function cpuAct(G,seat){
   if(G.phase==='block')return{t:'block',f:best(B.faces.map((_,i)=>i).filter(f=>f!==G.block&&G.faces[f]!=='waste'),f=>{let v=Math.random()*.1;B.faces[f].v.forEach(n=>{const b=G.nodes[n];if(b)v+=(b.o===seat?-3:1+pubVP(G,b.o)*.2)*YIELD[b.k]});return v})};
   const usable=p.cards.filter(c=>c.t<G.tick&&c.k!=='secret');
   if(G.phase==='roll'){
-    if(!G.played&&usable.some(c=>c.k==='forecast')){const d=best([1,2,3,4,5,6],d=>{let v=Math.random();B.faces.forEach((f,i)=>{if(G.nums[i]===d&&G.faces[i]!=='waste'&&!blocked(G,i))f.v.forEach(n=>{const b=G.nodes[n];if(b&&b.o===seat)v+=YIELD[b.k]})});return v});return{t:'play',k:'forecast',d}}
+    if(!G.played&&usable.some(c=>c.k==='forecast')){const c=best([1,2,3,4,5,6].flatMap(d=>RES.map(r=>({d,r}))),({d,r})=>{let v=Math.random();B.faces.forEach((f,i)=>{if(G.nums[i]===d&&G.faces[i]===r&&!blocked(G,i))f.v.forEach(n=>{const b=G.nodes[n];if(b&&b.o===seat)v+=YIELD[b.k]*(p.boost.includes(r)?2:1)})});return v});return{t:'play',k:'forecast',d:c.d,r:c.r}}
     return{t:'roll'}}
   if(G.bridge>0){const ls=legalLines(G,seat);if(ls.length)return{t:'line',k:'rail',e:lineChoice(G,seat,ls)};return{t:'end'}}
   if(p.mini<=G.turn)return{t:'mg',op:'auto',n:[0,3,3,6,6,9][Math.floor(Math.random()*6)]};
@@ -676,7 +676,7 @@ function gameView(){
     h+=`<div class="over"><div><h2>${esc(g.pl[g.winner].name)}の勝ち</h2>${rank.map(x=>`<div class="pl"><i style="background:${PC[x.i]}"></i><span class="nm">${esc(x.q.name)}</span><span class="vp">${x.v}点</span></div>`).join('')}<p class="sub">隠し資産も点数に入っています</p><button class="btn main" data-a="leave">表紙へ戻る</button></div></div>`}
   return h}
 function cardPanel(){const k=UI.card,opt=v=>RES.map(r=>`<option value="${r}" ${v===r?'selected':''}>${RN[r]}</option>`).join('');
-  if(k==='forecast')return`<p class="sub">${CARD.forecast.d}</p><div class="cardrow">${[1,2,3,4,5,6].map(d=>`<button class="btn" data-a="forecast" data-d="${d}">${d}</button>`).join('')}</div>`;
+  if(k==='forecast')return`<p class="sub">${CARD.forecast.d}</p><p class="sub">番号</p><div class="cardrow">${[1,2,3,4,5,6].map(d=>`<button class="btn ${UI.fd===d?'on':''}" data-a="fd" data-d="${d}">${d}</button>`).join('')}</div><p class="sub">物資</p><div class="cardrow">${RES.map(r=>`<button class="btn ${UI.fr===r?'on':''}" data-a="fr" data-r="${r}">${RN[r]}</button>`).join('')}</div><button class="btn main" data-a="forecast" ${UI.fd&&UI.fr?'':'disabled'}>この目で振る</button>`;
   if(k==='import')return`<p class="sub">${CARD.import.d}</p><div class="row"><label class="grow" for="m1">1つ目<select id="m1">${opt(UI.r1)}</select></label><label class="grow" for="m2">2つ目<select id="m2">${opt(UI.r2)}</select></label><button class="btn main" data-a="import">もらう</button></div>`;
   return`<p class="sub">${CARD[k].d}</p><button class="btn main" data-a="usecard">使う</button>`}
 function rulesView(){return`<div class="rules"><h2>遊び方</h2>
@@ -753,7 +753,8 @@ document.addEventListener('click',e=>{
     offer(){act({t:'offer',give:UI.give,want:UI.want});UI.give={};UI.want={};UI.panel=null;soft()},
     card(){UI.card=UI.card===d.k?null:d.k;render()},
     usecard(){const k=UI.card;UI.card=null;act({t:'play',k});toBoard()},
-    forecast(){UI.card=null;act({t:'play',k:'forecast',d:+d.d})},
+    fd(){UI.fd=+d.d;render()},fr(){UI.fr=d.r;render()},
+    forecast(){const c={t:'play',k:'forecast',d:UI.fd,r:UI.fr};UI.card=null;UI.fd=UI.fr=null;act(c)},
     import(){UI.card=null;act({t:'play',k:'import',r:[UI.r1,UI.r2]})},
     mini(){MINI.menu=true;render()},'m-x'(){MINI.menu=false;render()},'m-cart'(){act({t:'mg',op:'start',g:'cart'})},'m-trade'(){act({t:'mg',op:'start',g:'trade'})},'m-rail'(){act({t:'mg',op:'start',g:'rail'})},'m-pick'(){act({t:'mg',op:'pick',i:+d.i})},'m-go'(){act({t:'mg',op:'go'})},'m-buy'(){act({t:'mg',op:'buy'})},'m-sell'(){act({t:'mg',op:'sell'})},'m-next'(){act({t:'mg',op:'next'})},'m-tile'(){railTap(+d.i)},'m-ok'(){act({t:'mg',op:'close'})},
     quit(){act({t:'resign'});setTimeout(leave,700)}};
