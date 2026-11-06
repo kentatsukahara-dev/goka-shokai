@@ -143,7 +143,7 @@ function tickTable(t) {
   if (s === null || s === undefined) return;
   const a = E.cpuAct(G, s), e = E.apply(G, s, a);
   if (e && s === G.cur && !G.offer) E.apply(G, s, G.phase === 'roll' ? { t: 'roll' } : { t: 'end' });
-  L.nextCpu = now + (a.t === 'respond' ? 300 : 750);
+  L.nextCpu = now + (a.t === 'respond' ? 300 : a.t === 'roll' || a.k === 'forecast' ? 1500 : 750);
   afterMove(t);
 }
 setInterval(() => {
