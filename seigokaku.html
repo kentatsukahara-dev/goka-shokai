@@ -1,0 +1,777 @@
+<title>五角の商会</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@600;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<style>
+/* 配置の考え方: 夜空に浮かぶ正五角形の大陸の地図を広げた画面。左（スマホでは上）に地図、右に商会の帳場。 */
+:root{
+  --sea:#211932; --sea2:#2e2446; --sea3:#3f3360; --line:#5f5189;
+  --brass:#f1b84f; --brass2:#b98a35; --paper:#f6f0e2; --mute:#c3b9d8;
+  --warn:#ffb46b; --dark:#140e20;
+  --wood:#5f9a58; --stone:#a7a49a; --iron:#6f93b8; --coal:#4b4650; --cotton:#ece4d2; --food:#dcb648; --copper:#b5653a; --salt:#b9d6e0; --waste:#7a6248;
+  --p0:#ff7a5c; --p1:#ffd34d; --p2:#6fd0ff; --p3:#e39bff;
+  --disp:"Shippori Mincho B1","Hiragino Mincho ProN","Yu Mincho",serif;
+  --body:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",sans-serif;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{min-height:100%}
+body{background:var(--sea);color:var(--paper);font-family:var(--body);font-size:15px;line-height:1.6}
+#app{max-width:1180px;margin:0 auto;padding-block:14px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1,h2,h3{font-family:var(--disp);font-weight:800;margin:0;text-wrap:balance}
+p{margin:0}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+.btn{background:var(--sea2);border:1px solid var(--line);border-radius:6px;padding:9px 13px;min-height:42px;font-weight:700}
+.btn:hover:not(:disabled){border-color:var(--brass)}
+.btn.main{background:var(--brass);border-color:var(--brass);color:#22200f}
+.btn:disabled{opacity:.42;cursor:not-allowed}
+.btn.on{border-color:var(--brass);box-shadow:inset 0 0 0 1px var(--brass)}
+.btn small{display:block;font-weight:500;font-size:11.5px;color:inherit;opacity:.85;line-height:1.3}
+input,select{font:inherit;color:var(--paper);background:var(--sea);border:1px solid var(--line);border-radius:6px;padding:9px 11px;min-height:42px;width:100%}
+label{display:grid;gap:4px;font-size:13px;color:var(--mute)}
+.sub{color:var(--mute);font-size:13px}
+.err{color:var(--warn);font-size:13px}
+.title{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:28px;align-items:center;padding-top:12px}
+.title h1{font-size:clamp(36px,6.4vw,62px);line-height:1.15;color:var(--brass)}
+.title .lead{margin-top:10px;max-width:30em}
+.title svg{width:100%;height:auto;display:block}
+.stack{display:grid;gap:12px;margin-top:18px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end}
+.row>*{min-width:0}
+.grow{flex:1 1 130px}
+.sheet{border-top:1px solid var(--line);padding-top:14px;margin-top:18px;display:grid;gap:10px}
+.tables{display:grid;gap:6px}
+.trow{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--sea3)}
+.code{font-family:var(--disp);font-size:34px;letter-spacing:.14em;color:var(--brass)}
+.game{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(320px,1fr);gap:20px;align-items:start}
+.boardwrap{position:sticky;top:env(safe-area-inset-top,0px)}
+.board{width:100%;height:auto;display:block;touch-action:manipulation;user-select:none;-webkit-user-select:none;max-height:calc(100vh - 28px)}
+.side{display:grid;gap:14px;min-width:0}
+.prompt{border-left:4px solid var(--who,var(--brass));padding:6px 0 6px 12px}
+.prompt b{font-family:var(--disp);font-size:18px}
+.purse{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.purse b{font-family:var(--disp);font-size:26px;color:var(--brass);font-variant-numeric:tabular-nums}
+.hand{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
+.res{border-radius:6px;padding:5px 1px 4px;text-align:center;color:#17222a;font-weight:700;line-height:1.2}
+.res b{display:block;font-size:20px;font-family:var(--disp)}
+.res span{font-size:11.5px}
+.r-wood{background:var(--wood)}.r-stone{background:var(--stone)}.r-iron{background:var(--iron)}.r-coal{background:var(--coal);color:#fff}.r-cotton{background:var(--cotton)}.r-food{background:var(--food)}.r-copper{background:var(--copper);color:#fff}.r-salt{background:var(--salt)}
+.dice{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.dice b{min-width:42px;height:42px;padding:0 6px;display:grid;place-items:center;border-radius:6px;background:var(--paper);color:#17222a;font-family:var(--disp);font-size:18px}.town{display:grid;gap:6px;padding-top:8px;border-top:1px solid var(--sea3)}
+.acts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.acts .wide{grid-column:1/-1}
+.cardrow{display:flex;flex-wrap:wrap;gap:6px}
+.players{display:grid;gap:2px}
+.pl{display:grid;grid-template-columns:14px minmax(0,1fr) auto;gap:8px;align-items:center;padding:5px 6px;border-radius:4px}
+.pl.cur{background:var(--sea2)}
+.pl i{width:12px;height:12px;border-radius:50%;display:block}
+.pl .nm{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pl .st{font-size:12px;color:var(--mute);font-variant-numeric:tabular-nums}
+.vp{font-family:var(--disp);font-size:20px;color:var(--brass);font-variant-numeric:tabular-nums}
+.box{border-top:1px solid var(--line);padding-top:10px;display:grid;gap:8px}
+.box h3{font-size:15px;color:var(--brass)}
+.mk{display:grid;grid-template-columns:52px 1fr 1fr;gap:6px;align-items:center}
+.mk .btn{padding:4px 6px;min-height:36px;font-size:13px}
+.step{display:grid;grid-template-columns:48px repeat(2,minmax(0,1fr));gap:6px;align-items:center}
+.pm{display:grid;grid-template-columns:34px 1fr 34px;align-items:center;text-align:center;font-variant-numeric:tabular-nums}
+.pm button{background:var(--sea2);border:1px solid var(--line);border-radius:5px;min-height:34px;padding:0}
+.log{max-height:190px;overflow:auto;font-size:13px;display:grid;gap:2px;color:var(--mute)}
+.log p:first-child{color:var(--paper)}
+.offer{border:1px solid var(--brass);border-radius:6px;padding:9px 11px;display:grid;gap:7px}
+.rules{max-width:46em;display:grid;gap:12px}
+.rules h2{color:var(--brass);font-size:24px}
+.rules h3{color:var(--brass);font-size:17px;margin-top:6px}
+.rules ul{margin:0;padding-left:1.2em;display:grid;gap:3px}
+.tbl{overflow-x:auto}
+.tbl table{border-collapse:collapse;width:100%;font-size:14px}
+.tbl td,.tbl th{border-bottom:1px solid var(--sea3);padding:5px 8px;text-align:left}
+.over{position:fixed;inset:0;background:rgba(16,10,28,.84);display:grid;place-items:center;z-index:20;padding:16px}
+.over>div{background:var(--sea2);border:1px solid var(--brass);border-radius:8px;padding:20px;max-width:420px;width:100%;display:grid;gap:10px}
+.over h2{color:var(--brass);font-size:26px}
+.track{position:relative;height:44px;background:var(--sea);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.zone{position:absolute;top:0;bottom:0;background:var(--wood)}
+.mark{position:absolute;top:0;bottom:0;width:5px;margin-left:-2px;background:var(--brass)}
+.big{font-family:var(--disp);font-size:56px;text-align:center;color:var(--brass);line-height:1.1}
+.pulse{animation:pulse 1.3s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){.pulse{animation:none}}
+@media (max-width:820px){
+  .title{grid-template-columns:minmax(0,1fr)}
+  .title svg{max-width:280px;margin:0 auto;order:-1}
+  .game{grid-template-columns:minmax(0,1fr)}
+  .boardwrap{position:static}
+  .board{max-height:none}
+}
+</style>
+<div id="app"></div>
+<div id="mini"></div>
+
+<script id="engine">
+'use strict';
+/* ===== ゲームの中身（画面に依存しない） ===== */
+const RES=['wood','stone','iron','coal','cotton','food','copper','salt'],KEYS=[...RES,'money'];
+const RN={wood:'木材',stone:'石材',iron:'鉄',coal:'石炭',cotton:'綿',food:'食料',copper:'銅',salt:'塩',money:'お金'};
+const RG={wood:'木',stone:'石',iron:'鉄',coal:'炭',cotton:'綿',food:'食',copper:'銅',salt:'塩',waste:'荒'};
+const COST={dirt:{wood:1},rail:{stone:1,iron:1},upg:{coal:1},take:{stone:1,iron:1,money:2},hut:{food:1,salt:1},seize:{food:2,salt:2},st:{stone:1,iron:1,cotton:2,copper:1,money:2},fac:{iron:2,coal:1,copper:2,salt:2,food:1,money:4},card:{cotton:1,food:1,money:2},deed:{money:12}};
+const LIMIT={line:24,hut:6,st:4,fac:3,deed:2,boost:2,ord:3},YIELD={h:1,s:2,o:3};
+const AP=3,ITEM=25,ORDER_PAY=5,ZORO=3,ZORO3=8,MINI_GAP=10;
+const CARD={survey:{n:'測量隊',d:'通行止めを好きなマスへ動かし、そばの相手から物資を1つもらう',c:8},
+  forecast:{n:'天気読み',d:'振る前に使い、番号のサイコロ1個の目を1〜6から選ぶ。残りは普通に振る',c:4},
+  import:{n:'緊急輸入',d:'好きな物資を2つもらう',c:3},
+  bond:{n:'鉄道債',d:'線路を2本、行動を使わずただで敷く',c:2},
+  secret:{n:'隠し資産',d:'持っているだけで1点。最後まで相手には見えない',c:3}};
+const mod=(a,b)=>((a%b)+b)%b;
+/* マスの中でいちばん広い場所（文字を置く位置）を探す */
+function pole(poly){
+  const xs=poly.map(p=>p[0]),ys=poly.map(p=>p[1]),x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);
+  const dist=(x,y)=>{let inside=false,d=1e9;poly.forEach((a,i)=>{const b=poly[(i+1)%poly.length];
+    if((a[1]>y)!==(b[1]>y)&&x<(b[0]-a[0])*(y-a[1])/(b[1]-a[1])+a[0])inside=!inside;
+    const dx=b[0]-a[0],dy=b[1]-a[1],t=Math.max(0,Math.min(1,((x-a[0])*dx+(y-a[1])*dy)/(dx*dx+dy*dy)));d=Math.min(d,Math.hypot(x-a[0]-t*dx,y-a[1]-t*dy))});return inside?d:-d};
+  let cx=x0,cy=y0,best=-1e9;for(let i=1;i<24;i++)for(let j=1;j<24;j++){const x=x0+(x1-x0)*i/24,y=y0+(y1-y0)*j/24,d=dist(x,y);if(d>best){best=d;cx=x;cy=y}}
+  return{cx,cy,inr:best}}
+/* 正五角形の盤面。三角形の網の「頂点」がマス、「三角形」が駅の置き場なので、どの置き場もちょうど3マスに触れる */
+const CN=4,STAR_R=480;
+let BOARD=null;
+function getB(){
+  if(BOARD)return BOARD;
+  const R=STAR_R,pol=(q,a)=>[q*Math.cos(a),q*Math.sin(a)],D=Math.PI/180;
+  const T=[];for(let k=0;k<5;k++)T.push(pol(R,(-90+72*k)*D));
+  const lerp=(p,q,t)=>[p[0]+(q[0]-p[0])*t,p[1]+(q[1]-p[1])*t];
+  const verts=[],vmap={},tris=[];
+  const V=p=>{const k=Math.round(p[0])+','+Math.round(p[1]);if(vmap[k]===undefined){vmap[k]=verts.length;verts.push(p)}return vmap[k]};
+  const strip=(a,b,mid)=>{let i=0,j=0;const d=(p,q)=>Math.hypot(p[0]-q[0],p[1]-q[1]);
+    while(i<a.length-1||j<b.length-1){let top;
+      if(i>=a.length-1)top=true;else if(j>=b.length-1)top=false;else{const x=d(a[i+1],b[j]),y=d(a[i],b[j+1]);top=Math.abs(x-y)<1?(a[i][0]-mid[0])*(a[a.length-1][0]-a[0][0])+(a[i][1]-mid[1])*(a[a.length-1][1]-a[0][1])>=0:y<x}
+      if(top){tris.push([V(a[i]),V(b[j]),V(b[j+1])]);j++}else{tris.push([V(a[i]),V(a[i+1]),V(b[j])]);i++}}};
+  const row=(p,q,c)=>{const o=[];for(let i=0;i<=c;i++)o.push(c?lerp(p,q,i/c):p);return o};
+  for(let k=0;k<5;k++){const p=T[k],q=T[(k+1)%5],C=[0,0],mid=lerp(p,q,.5);
+    for(let i=0;i<CN;i++)strip(row(lerp(C,p,(i+1)/CN),lerp(C,q,(i+1)/CN),i+1),row(lerp(C,p,i/CN),lerp(C,q,i/CN),i),lerp(C,mid,(i+.5)/CN));
+  }
+  const raw=tris.map(t=>[(verts[t[0]][0]+verts[t[1]][0]+verts[t[2]][0])/3,(verts[t[0]][1]+verts[t[1]][1]+verts[t[2]][1])/3]),IN=.84;
+  const nodes=raw.map(p=>({x:p[0]*IN,y:p[1]*IN}));
+  const em={};tris.forEach((t,i)=>{for(let k=0;k<3;k++){const a=t[k],b=t[(k+1)%3],key=Math.min(a,b)+'-'+Math.max(a,b);(em[key]=em[key]||{a,b,t:[]}).t.push(i)}});
+  const edges=[],mids=verts.map(()=>[]),adjS=verts.map(()=>new Set());
+  Object.values(em).forEach(m=>{adjS[m.a].add(m.b);adjS[m.b].add(m.a);
+    if(m.t.length===2)edges.push(m.t);else{const p=lerp(verts[m.a],verts[m.b],.5);mids[m.a].push(p);mids[m.b].push(p)}});
+  const faces=verts.map((p,i)=>{
+    const v=[];tris.forEach((t,n)=>{if(t.includes(i))v.push(n)});
+    const ang=q=>Math.atan2(q[1]-p[1],q[0]-p[0]);
+    let list=[...v.map(n=>({q:raw[n],o:[nodes[n].x,nodes[n].y]})),...mids[i].map(q=>({q,o:q}))].sort((a,b)=>ang(a.q)-ang(b.q));
+    if(mids[i].length){let g=-1,at=0;list.forEach((e,k)=>{const w=mod(ang(list[(k+1)%list.length].q)-ang(e.q),2*Math.PI)||2*Math.PI;if(w>g){g=w;at=k}});
+      list=[{o:p},...list.slice(at+1),...list.slice(0,at+1)]}
+    list=list.map(e=>e.o);
+    return{v,poly:list,...pole(list),waste:false}});
+  const center=verts.findIndex(p=>Math.hypot(p[0],p[1])<1);faces[center].waste=true;
+    /* 外周の道。ここは通過点で、建物は置けない（建てられる点は3マス接触のまま） */
+  const ways=[];Object.values(em).forEach(m=>{if(m.t.length===1){const p=lerp(verts[m.a],verts[m.b],.5),id=nodes.length;nodes.push({x:p[0]*.985,y:p[1]*.985,way:true});edges.push([m.t[0],id]);ways.push({id,p})}});
+  const cor=T.map(t=>{nodes.push({x:t[0]*.97,y:t[1]*.97,way:true});return nodes.length-1});
+  T.forEach((t,k)=>{const u=T[(k+1)%5],L=Math.hypot(u[0]-t[0],u[1]-t[1]),dx=(u[0]-t[0])/L,dy=(u[1]-t[1])/L;
+    const on=ways.filter(w=>Math.abs((w.p[0]-t[0])*dy-(w.p[1]-t[1])*dx)<1).sort((a,b)=>Math.hypot(a.p[0]-t[0],a.p[1]-t[1])-Math.hypot(b.p[0]-t[0],b.p[1]-t[1]));
+    const chain=[cor[k],...on.map(w=>w.id),cor[(k+1)%5]];for(let i=0;i<chain.length-1;i++)edges.push([chain[i],chain[i+1]])});
+  const dead=nodes.map((_,n)=>n>=tris.length||tris[n].some(i=>faces[i].waste));
+  faces.forEach(f=>{f.c=f.v.filter(n=>!dead[n]).length});
+  const NE=nodes.map(()=>[]),NF=nodes.map((_,n)=>n<tris.length?tris[n].slice():[]),NN=nodes.map(()=>[]);
+  edges.forEach(([a,b],e)=>{NE[a].push(e);NE[b].push(e);NN[a].push(b);NN[b].push(a)});
+  const adj=adjS.map(s=>[...s]);
+  return BOARD={nodes,edges,faces,NE,NF,NN,adj,dead,star:T,towns:T.map((t,k)=>{const f=verts.findIndex(p=>Math.hypot(p[0]-t[0],p[1]-t[1])<1);return{x:t[0],y:t[1],f,spots:[...faces[f].v,cor[k]]}})}}
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+function makeFaces(B){
+  const out=B.faces.map(f=>f.waste?'waste':null),ids=B.faces.map((f,i)=>f.waste?-1:i).filter(i=>i>=0);
+  const total=ids.reduce((a,i)=>a+B.faces[i].c,0),goal=total/RES.length,sum={};RES.forEach(r=>{sum[r]=0});
+  shuffle(ids).sort((a,b)=>B.faces[b].c-B.faces[a].c).forEach(i=>{const r=shuffle(RES.slice()).sort((x,y)=>sum[x]-sum[y])[0];out[i]=r;sum[r]+=B.faces[i].c});
+  const spots=B.NF.filter((_,n)=>!B.dead[n]);
+  const cost=()=>{let c=0;RES.forEach(r=>{const d=Math.abs(sum[r]-goal);if(d>=1)c+=d*d*20});
+    spots.forEach(s=>{const a=out[s[0]],b=out[s[1]],d=out[s[2]];if(a===b||b===d||a===d)c+=4});
+    return c};
+  let cur=cost();
+  for(let k=0;k<5000&&cur>0;k++){const i=ids[Math.floor(Math.random()*ids.length)],j=ids[Math.floor(Math.random()*ids.length)],a=out[i],b=out[j];if(a===b)continue;
+    const ci=B.faces[i].c,cj=B.faces[j].c;out[i]=b;out[j]=a;sum[a]+=cj-ci;sum[b]+=ci-cj;const n=cost();
+    if(n<=cur)cur=n;else{out[i]=a;out[j]=b;sum[a]-=cj-ci;sum[b]-=ci-cj}}
+  const nums=B.faces.map(()=>0);
+  RES.forEach(r=>{const s=[0,0,0,0,0,0];shuffle(ids.filter(i=>out[i]===r)).sort((a,b)=>B.faces[b].c-B.faces[a].c).forEach(i=>{const o=shuffle([0,1,2,3,4,5]).sort((x,y)=>s[x]-s[y])[0];nums[i]=o+1;s[o]+=B.faces[i].c})});
+  return{faces:out,nums}}
+const newOrder=()=>{const[a,b]=shuffle(RES.slice());return{[a]:2,[b]:2}};
+function newGame(cfg){
+  const seats=shuffle(cfg.seats.slice()),n=seats.length,map=1,B=getB(),deck=[];
+  Object.keys(CARD).forEach(k=>{for(let i=0;i<CARD[k].c;i++)deck.push(k)});shuffle(deck);
+  const {faces,nums}=makeFaces(B),order=[];for(let i=0;i<n;i++)order.push(i);for(let i=n-1;i>=0;i--)order.push(i);
+  const mk={};RES.forEach(r=>{mk[r]=3});
+  const slots=shuffle([...RES,...shuffle(RES.slice()).slice(0,2)]),shop=[0,1,2,3,4].map(k=>[...new Set([slots[2*k],slots[2*k+1]])]),orders=[0,1,2,3,4].map(newOrder);
+  return{seq:0,n,map,target:cfg.target||10,faces,nums,shop,orders,ap:AP,dC:null,dD:null,ek:new Array(B.edges.length).fill(0),block:null,nodes:new Array(B.nodes.length).fill(null),edges:new Array(B.edges.length).fill(null),
+    mk,dA:null,dB:null,cur:order[0],phase:'setup',order,oi:0,step:'hut',lastHut:null,tick:0,turn:1,played:false,offers:0,bridge:0,mops:0,back:null,offer:null,deck,winner:null,log:['地図が広げられました。駅を置く場所を選びましょう'],
+    pl:seats.map(s=>({name:s.name,uid:s.uid||null,cpu:!!s.cpu,me:!!s.me,mg:null,deeds:0,boost:[],ord:0,mini:1,hand:{wood:0,stone:0,iron:0,coal:0,cotton:0,food:0,copper:0,salt:0,money:4},cards:[]}))}}
+const count=(G,o,k)=>G.nodes.filter(x=>x&&x.o===o&&x.k===k).length;
+const lines=(G,o)=>G.edges.filter(x=>x===o).length;
+const handN=p=>RES.reduce((a,r)=>a+p.hand[r],0);
+const canPay=(p,c)=>KEYS.every(r=>p.hand[r]>=(c[r]||0));
+const pay=(p,c)=>KEYS.forEach(r=>{p.hand[r]-=(c[r]||0)});
+const gain=(p,c)=>KEYS.forEach(r=>{p.hand[r]+=(c[r]||0)});
+const secretN=(G,o)=>G.pl[o].cards.filter(c=>c.k==='secret').length;
+const pubVP=(G,o)=>2*count(G,o,'s')+3*count(G,o,'o')+G.pl[o].deeds+G.pl[o].ord;
+const fullVP=(G,o)=>pubVP(G,o)+secretN(G,o);
+const log=(G,m)=>{G.log.push(m);if(G.log.length>60)G.log.shift()};
+const bagTxt=b=>KEYS.filter(r=>b[r]).map(r=>RN[r]+b[r]).join('・');
+const blocked=(G,f)=>G.block===f;
+const sellP=(G,r)=>Math.max(1,Math.floor(G.mk[r]/2));
+function setupHuts(G){const B=getB(G.map),out=[];for(let n=0;n<B.nodes.length;n++)if(!B.dead[n]&&!G.nodes[n]&&B.NN[n].every(m=>!G.nodes[m]))out.push(n);return out}
+function legalHuts(G,o){const B=getB(G.map);return setupHuts(G).filter(n=>B.NE[n].some(e=>G.edges[e]===o))}
+function legalLines(G,o){const B=getB(G.map),out=[];
+  for(let e=0;e<B.edges.length;e++){if(G.edges[e]!==null)continue;
+    if(G.phase==='setup'){if(B.edges[e].includes(G.lastHut))out.push(e);continue}
+    if(B.edges[e].some(v=>{const b=G.nodes[v];if(b)return b.o===o;return B.NE[v].some(x=>G.edges[x]===o)}))out.push(e)}
+  return out}
+const ownAt=(G,o,v)=>{const b=G.nodes[v];if(b)return b.o===o;return getB().NE[v].some(x=>G.edges[x]===o)};
+const legalUpg=(G,o)=>G.edges.map((x,e)=>x===o&&G.ek[e]===0?e:-1).filter(e=>e>=0);
+const legalTake=(G,o)=>{const B=getB();return G.edges.map((x,e)=>x!==null&&x!==o&&G.ek[e]===0&&B.edges[e].some(v=>ownAt(G,o,v))?e:-1).filter(e=>e>=0)};
+const ofKind=(G,o,k)=>{const out=[];G.nodes.forEach((b,n)=>{if(b&&b.o===o&&b.k===k)out.push(n)});return out};
+const legalSt=(G,o)=>ofKind(G,o,'h'),legalFac=(G,o)=>ofKind(G,o,'s');
+const legalSeize=(G,o)=>{const B=getB(),out=[];G.nodes.forEach((b,n)=>{if(b&&b.o!==o&&b.k==='h'&&B.NE[n].some(e=>G.edges[e]===o))out.push(n)});return out};
+const visit=(G,o,k)=>getB().towns[k].spots.some(v=>(G.nodes[v]&&G.nodes[v].o===o)||getB().NE[v].some(x=>G.edges[x]===o));
+function produce(G){
+  const B=getB(),rs=[...new Set([RES[G.dB-1],RES[G.dD-1]])],any=G.pl.map(()=>0);
+  rs.forEach(r=>{const got=G.pl.map(()=>0);
+    B.faces.forEach((f,i)=>{if((G.nums[i]!==G.dA&&G.nums[i]!==G.dC)||G.faces[i]!==r||blocked(G,i))return;
+      f.v.forEach(n=>{const b=G.nodes[n];if(b)got[b.o]+=YIELD[b.k]*(G.pl[b.o].boost.includes(r)?2:1)})});
+    got.forEach((v,i)=>{if(v){any[i]+=v;G.pl[i].hand[r]+=v;log(G,`${G.pl[i].name}：${RN[r]}${v}を得た`)}})});
+  if(!any[G.cur]){G.pl[G.cur].hand.money+=1;log(G,`${G.pl[G.cur].name}は収穫なし。補助金1を得た`)}}
+function doRoll(G,a,c,b,d){
+  G.dA=a;G.dC=c;G.dB=b;G.dD=d;log(G,`${G.pl[G.cur].name}のサイコロ：${RN[RES[b-1]]}と${RN[RES[d-1]]}、番号${a}と${c}`);
+  produce(G);
+  if(a===c){const m=b===d?ZORO3:ZORO;G.pl[G.cur].hand.money+=m;log(G,`ゾロ目！${G.pl[G.cur].name}がお金${m}をもらった`);
+    G.pl.forEach(p=>{const t=handN(p);if(t>=14){const lose=Math.floor(t/2);for(let i=0;i<lose;i++){const x=RES.filter(r=>p.hand[r]>0);p.hand[x[Math.floor(Math.random()*x.length)]]--}log(G,`${p.name}の倉庫があふれ、${lose}個を失った`)}});
+    G.back='main';G.phase='block'}
+  else G.phase='main'}
+function doBlock(G,f){
+  const B=getB(G.map),me=G.cur;G.block=f;
+  const v=[...new Set(B.faces[f].v.map(n=>G.nodes[n]&&G.nodes[n].o).filter(o=>o!==null&&o!==undefined&&o!==me&&handN(G.pl[o])>0))];
+  log(G,`${G.pl[me].name}が通行止めを動かした`);
+  if(v.length){v.sort((a,b)=>pubVP(G,b)-pubVP(G,a));const t=G.pl[v[0]],a=RES.filter(r=>t.hand[r]>0),r=a[Math.floor(Math.random()*a.length)];t.hand[r]--;G.pl[me].hand[r]++;log(G,`${G.pl[me].name}は${t.name}から物資を1つもらった`)}
+  G.phase=G.back||'main';G.back=null}
+function nextSetup(G){G.oi++;if(G.oi>=G.order.length){G.phase='roll';G.cur=0;G.turn=1;log(G,`準備が整いました。${G.pl[0].name}の手番です`);return}G.cur=G.order[G.oi];G.step='hut'}
+function cleanBag(b){const o={};let t=0;if(b&&typeof b==='object')KEYS.forEach(r=>{const v=b[r];if(Number.isInteger(v)&&v>0&&v<100){o[r]=v;t+=v}});return t?o:null}
+function apply(G,seat,a){
+  if(!a||typeof a!=='object'||G.phase==='over')return'今は操作できません';
+  const p=G.pl[seat];if(!p)return'席がありません';const t=a.t;
+  if(t==='resign'){p.cpu=true;log(G,`${p.name}は席を立ち、CPUが代わります`);G.seq++;return null}
+  if(t==='respond'){const o=G.offer;if(!o||seat===o.from||o.no.includes(seat))return'答える提案がありません';
+    if(a.ok){if(!canPay(p,o.want))return'足りません';const f=G.pl[o.from];if(!canPay(f,o.give)){G.offer=null;G.seq++;return null}
+      pay(f,o.give);gain(f,o.want);pay(p,o.want);gain(p,o.give);log(G,`${f.name}と${p.name}が取引した（${bagTxt(o.give)} ⇄ ${bagTxt(o.want)}）`);G.offer=null}
+    else{o.no.push(seat);if(o.no.length>=G.n-1){log(G,`${G.pl[o.from].name}の提案は見送られた`);G.offer=null}}
+    G.seq++;return null}
+  if(seat!==G.cur)return'手番ではありません';
+  if(G.offer&&t!=='cancel')return'提案の返事を待っています';
+  const err=step(G,seat,p,a);if(err)return err;
+  if(G.phase!=='setup'&&G.phase!=='over'){if(fullVP(G,G.cur)>=G.target)finish(G,G.cur);else if(G.turn>300)finish(G,G.pl.map((_,i)=>i).sort((x,y)=>fullVP(G,y)-fullVP(G,x))[0])}
+  G.seq++;return null}
+function finish(G,w){G.phase='over';G.winner=w;log(G,`${G.pl[w].name}が${fullVP(G,w)}点で勝ちました`)}
+const die=()=>1+Math.floor(Math.random()*6),die8=()=>1+Math.floor(Math.random()*8);
+function step(G,seat,p,a){
+  const B=getB(),t=a.t,n=a.n,e=a.e,main=G.phase==='main',noAp='今の手番の行動は使い切りました';
+  switch(t){
+  case'setupHut':{if(G.phase!=='setup'||G.step!=='hut'||!setupHuts(G).includes(n))return'そこには置けません';
+    G.nodes[n]={o:seat,k:'h'};G.lastHut=n;G.step='line';
+    if(G.oi>=G.n){const g={};B.NF[n].forEach(f=>{const r=G.faces[f];if(r!=='waste')g[r]=(g[r]||0)+1});gain(p,g);if(Object.keys(g).length)log(G,`${p.name}は最初の物資（${bagTxt(g)}）を得た`)}
+    return null}
+  case'setupLine':{if(G.phase!=='setup'||G.step!=='line'||!legalLines(G,seat).includes(e))return'そこには敷けません';G.edges[e]=seat;G.ek[e]=0;nextSetup(G);return null}
+  case'roll':{if(G.phase!=='roll')return'今は振れません';doRoll(G,die(),die(),die8(),die8());return null}
+  case'block':{if(G.phase!=='block'||!Number.isInteger(a.f)||a.f<0||a.f>=B.faces.length||a.f===G.block||G.faces[a.f]==='waste')return'そこには動かせません';doBlock(G,a.f);return null}
+  case'line':{if(!main)return'今は敷けません';if(lines(G,seat)>=LIMIT.line)return'道を使い切りました';
+    if(!legalLines(G,seat).includes(e))return'そこには敷けません';
+    if(G.bridge>0){G.bridge--;G.edges[e]=seat;G.ek[e]=1;log(G,`${p.name}が線路を敷いた`);return null}
+    if(G.ap<1)return noAp;const k=a.k==='rail'?'rail':'dirt';if(!canPay(p,COST[k]))return'足りません';pay(p,COST[k]);G.ap--;
+    G.edges[e]=seat;G.ek[e]=k==='rail'?1:0;log(G,`${p.name}が${k==='rail'?'線路':'土の道'}を敷いた`);return null}
+  case'upg':{if(!main)return'今はできません';if(G.ap<1)return noAp;if(!legalUpg(G,seat).includes(e))return'強化できません';if(!canPay(p,COST.upg))return'足りません';
+    pay(p,COST.upg);G.ap--;G.ek[e]=1;log(G,`${p.name}が土の道を線路にした`);return null}
+  case'take':{if(!main)return'今はできません';if(G.ap<1)return noAp;if(lines(G,seat)>=LIMIT.line)return'道を使い切りました';if(!legalTake(G,seat).includes(e))return'その道は乗っ取れません';if(!canPay(p,COST.take))return'足りません';
+    const v=G.edges[e];pay(p,COST.take);G.ap--;G.edges[e]=seat;G.ek[e]=1;log(G,`${p.name}が${G.pl[v].name}の土の道を乗っ取った`);return null}
+  case'hut':{if(!main)return'今は建てられません';if(G.ap<1)return noAp;if(count(G,seat,'h')>=LIMIT.hut)return'小屋を使い切りました';if(!legalHuts(G,seat).includes(n))return'そこには建てられません';
+    if(!canPay(p,COST.hut))return'足りません';pay(p,COST.hut);G.ap--;G.nodes[n]={o:seat,k:'h'};log(G,`${p.name}が小屋を建てた`);return null}
+  case'seize':{if(!main)return'今はできません';if(G.ap<1)return noAp;if(count(G,seat,'h')>=LIMIT.hut)return'小屋を使い切りました';if(!legalSeize(G,seat).includes(n))return'その小屋は奪えません';if(!canPay(p,COST.seize))return'足りません';
+    const v=G.nodes[n].o;pay(p,COST.seize);G.ap--;G.nodes[n].o=seat;log(G,`${p.name}が${G.pl[v].name}の小屋を奪った`);return null}
+  case'st':{if(!main)return'今は建てられません';if(G.ap<1)return noAp;if(count(G,seat,'s')>=LIMIT.st)return'駅を使い切りました';if(!legalSt(G,seat).includes(n))return'そこには建てられません';
+    if(!canPay(p,COST.st))return'足りません';pay(p,COST.st);G.ap--;G.nodes[n].k='s';log(G,`${p.name}が小屋を駅にした`);return null}
+  case'fac':{if(!main)return'今は建てられません';if(G.ap<1)return noAp;if(count(G,seat,'o')>=LIMIT.fac)return'工場を使い切りました';if(!legalFac(G,seat).includes(n))return'そこには建てられません';
+    if(!canPay(p,COST.fac))return'足りません';pay(p,COST.fac);G.ap--;G.nodes[n].k='o';log(G,`${p.name}が駅を工場にした`);return null}
+  case'item':{if(!main)return'今は買えません';if(G.ap<1)return noAp;const k=a.k;if(!Number.isInteger(k)||!G.shop[k]||!visit(G,seat,k))return'その町には線路が届いていません';
+    const i=G.shop[k].indexOf(a.r);if(i<0)return'売り切れです';if(p.boost.includes(a.r))return'同じ増産権は持てません';if(p.boost.length>=LIMIT.boost)return'増産権は1人2枚までです';if(p.hand.money<ITEM)return'お金が足りません';
+    p.hand.money-=ITEM;G.ap--;G.shop[k].splice(i,1);p.boost.push(a.r);log(G,`${p.name}が町商人${k+1}から${RN[a.r]}の増産権を買った`);return null}
+  case'deliver':{if(!main)return'今は納品できません';if(G.ap<1)return noAp;const k=a.k;if(!Number.isInteger(k)||!G.orders[k]||!visit(G,seat,k))return'その町には線路が届いていません';
+    if(p.ord>=LIMIT.ord)return'納品の点は3点までです';if(!canPay(p,G.orders[k]))return'足りません';pay(p,G.orders[k]);G.ap--;p.ord++;p.hand.money+=ORDER_PAY;log(G,`${p.name}が町商人${k+1}に納品した（+1点、お金${ORDER_PAY}）`);G.orders[k]=newOrder();return null}
+  case'buy':{if(!main)return'今は買えません';if(!G.deck.length)return'契約書は売り切れです';if(!canPay(p,COST.card))return'足りません';
+    pay(p,COST.card);p.cards.push({k:G.deck.pop(),t:G.tick});log(G,`${p.name}が契約書を買った`);return null}
+  case'deed':{if(!main)return'今は買えません';if(p.deeds>=LIMIT.deed)return'権利書は1人2枚までです';if(!canPay(p,COST.deed))return'お金が足りません';
+    pay(p,COST.deed);p.deeds++;log(G,`${p.name}が土地の権利書を買った（+1点）`);return null}
+  case'mbuy':{if(!main||!RES.includes(a.r))return'今は買えません';const c=G.mk[a.r];if(p.hand.money<c)return'お金が足りません';
+    p.hand.money-=c;p.hand[a.r]++;G.mk[a.r]=Math.min(8,c+1);G.mops++;log(G,`${p.name}が市場で${RN[a.r]}を${c}で買った`);return null}
+  case'msell':{if(!main||!RES.includes(a.r))return'今は売れません';if(p.hand[a.r]<1)return'物資がありません';
+    const c=sellP(G,a.r);p.hand[a.r]--;p.hand.money+=c;G.mk[a.r]=Math.max(2,G.mk[a.r]-1);G.mops++;log(G,`${p.name}が市場で${RN[a.r]}を${c}で売った`);return null}
+  case'mg':{if(!main)return'今は遊べません';return mgStep(G,p,a)}
+  case'play':{const i=p.cards.findIndex(c=>c.k===a.k&&c.t<G.tick);if(i<0||a.k==='secret')return'使える契約書がありません';if(G.played)return'契約書は1手番に1枚です';
+    if(!main&&G.phase!=='roll')return'今は使えません';
+    if(a.k==='forecast'){if(G.phase!=='roll')return'天気読みは振る前に使います';if(!Number.isInteger(a.d)||a.d<1||a.d>6)return'番号を選んでください'}
+    if(a.k==='import'&&(!Array.isArray(a.r)||a.r.length!==2||!a.r.every(r=>RES.includes(r))))return'物資を選んでください';
+    if(a.k==='bond'&&(!main||lines(G,seat)>=LIMIT.line))return'今は使えません';
+    p.cards.splice(i,1);G.played=true;log(G,`${p.name}が「${CARD[a.k].n}」を使った`);
+    if(a.k==='survey'){G.back=G.phase;G.phase='block'}
+    else if(a.k==='forecast')doRoll(G,a.d,die(),die8(),die8());
+    else if(a.k==='import')a.r.forEach(r=>p.hand[r]++);
+    else if(a.k==='bond')G.bridge=Math.min(2,LIMIT.line-lines(G,seat));
+    return null}
+  case'offer':{if(!main)return'今は提案できません';if(G.offers>=3)return'提案は1手番に3回までです';const give=cleanBag(a.give),want=cleanBag(a.want);if(!give||!want)return'渡すものと欲しいものを選んでください';if(!canPay(p,give))return'足りません';
+    G.offer={from:seat,give,want,no:[]};G.offers++;log(G,`${p.name}の提案：${bagTxt(give)}を渡すので${bagTxt(want)}が欲しい`);return null}
+  case'cancel':{if(!G.offer)return'提案がありません';G.offer=null;return null}
+  case'end':{if(!main)return'今は終えられません';p.mg=null;G.bridge=0;G.played=false;G.offers=0;G.mops=0;G.ap=AP;G.tick++;G.cur=mod(G.cur+1,G.n);
+    if(G.cur===0){G.turn++;RES.forEach(r=>{if(G.mk[r]>3)G.mk[r]--;else if(G.mk[r]<3)G.mk[r]++})}
+    G.phase='roll';G.dA=null;G.dB=null;G.dC=null;G.dD=null;return null}
+  }
+  return'知らない操作です'}
+/* ---- ミニゲーム（判定はすべてここ。サーバー版では答えが手元に届かない） ---- */
+const CARGO=[['綿',1,1],['塩',1,1],['食料',2,1],['木材',2,1],['銅',2,2],['石材',3,2],['鉄',3,2],['石炭',4,3],['絹',2,2],['陶器',3,3]];
+const cartDeal=()=>shuffle(CARGO.slice()).slice(0,2);
+const tradeMove=()=>{const dir=Math.random()<.5?1:-1;return{dir,amt:1+Math.floor(Math.random()*2),tip:Math.random()<.7?dir:-dir}};
+const RN4=4,railRot=m=>((m<<1)&15)|(m>>3),RAIL_T=[[15,9],[25,6],[40,3]];
+function railTrace(g,s,e){let c=0,r=s,from=8;const lit=[];
+  for(let n=0;n<40;n++){if(c<0||r<0||c>=RN4||r>=RN4)return{ok:false,lit};const m=g[r*RN4+c];if(!(m&from))return{ok:false,lit};lit.push(r*RN4+c);const out=m^from;
+    if(c===RN4-1&&r===e&&out===2)return{ok:true,lit};
+    if(out===1)r--;else if(out===4)r++;else if(out===2)c++;else c--;from=out===1?4:out===4?1:out===2?8:2}
+  return{ok:false,lit}}
+function railMake(){let path;
+  for(;;){let r=Math.floor(Math.random()*RN4),c=0;const seen={};path=[[c,r]];seen[c+','+r]=1;
+    while(c<RN4-1||path.length<6){const o=[[1,0],[1,0],[0,1],[0,-1]].map(d=>[c+d[0],r+d[1]]).filter(q=>q[0]<RN4&&q[1]>=0&&q[1]<RN4&&!seen[q]);if(!o.length)break;const q=o[Math.floor(Math.random()*o.length)];[c,r]=q;seen[q]=1;path.push(q);if(c===RN4-1&&path.length>=6)break}
+    if(c===RN4-1&&path.length>=6)break}
+  const side=(a,b)=>b[0]>a[0]?2:b[0]<a[0]?8:b[1]>a[1]?4:1,opp=m=>m===1?4:m===4?1:m===2?8:2,g=[];
+  for(let i=0;i<RN4*RN4;i++)g.push(Math.random()<.5?5:3);
+  path.forEach((p,i)=>{const a=i?opp(side(path[i-1],p)):8,b=i<path.length-1?side(p,path[i+1]):2;g[p[1]*RN4+p[0]]=a|b});
+  const solved=g.slice(),s=path[0][1],e=path[path.length-1][1];
+  do{for(let i=0;i<g.length;i++){g[i]=solved[i];for(let k=Math.floor(Math.random()*4);k>0;k--)g[i]=railRot(g[i])}}while(railTrace(g,s,e).ok);
+  return{g,s,e,solved}}
+function mgNew(k){
+  if(k==='cart')return{g:'cart',load:0,val:0,limit:7+Math.floor(Math.random()*6),offer:cartDeal()};
+  if(k==='trade')return{g:'trade',day:1,cash:10,stock:0,price:5,hist:[5],nx:tradeMove()};
+  const b=railMake();return{g:'rail',grid:b.g,s:b.s,e:b.e,t0:Date.now()}}
+function mgEnd(G,p,n,msg){n=Math.max(0,Math.min(9,n));p.hand.money+=n;p.mg={done:true,n,msg};log(G,`${p.name}はミニゲームで${n}稼いだ`)}
+function mgStep(G,p,a){const m=p.mg,op=a.op;
+  if(op==='start'){if(p.mini>G.turn)return`ミニゲームはあと${p.mini-G.turn}周遊べません`;if(!['cart','trade','rail'].includes(a.g))return'知らないゲームです';p.mini=G.turn+MINI_GAP;p.mg=mgNew(a.g);return null}
+  if(op==='auto'){if(p.mini>G.turn)return'今は遊べません';if(!Number.isInteger(a.n)||a.n<0||a.n>9)return'結果が正しくありません';p.mini=G.turn+MINI_GAP;p.hand.money+=a.n;log(G,`${p.name}はミニゲームで${a.n}稼いだ`);return null}
+  if(op==='close'){p.mg=null;return null}
+  if(!m||m.done)return'遊んでいません';
+  if(m.g==='cart'){
+    if(op==='pick'){const c=m.offer[a.i];if(!c)return'選べません';m.load+=c[1];m.val+=c[2];if(m.load>m.limit)mgEnd(G,p,Math.floor(m.val/3),`重さ${m.load}で荷車が壊れました。限界は${m.limit}でした。`);else m.offer=cartDeal();return null}
+    if(op==='go'){if(!m.load)return'荷物がありません';mgEnd(G,p,m.val,`無事に届けました。限界は${m.limit}でした。`);return null}}
+  if(m.g==='trade'){
+    if(op==='buy'){if(m.cash<m.price)return'手元が足りません';m.cash-=m.price;m.stock++;return null}
+    if(op==='sell'){if(!m.stock)return'在庫がありません';m.cash+=m.price;m.stock--;return null}
+    if(op==='next'){if(m.day>=7){const end=m.cash+m.stock*m.price;mgEnd(G,p,end-10,`手元10が${end}になりました。`);return null}
+      m.price=Math.max(2,Math.min(11,m.price+m.nx.dir*m.nx.amt));m.hist.push(m.price);m.day++;m.nx=tradeMove();return null}}
+  if(m.g==='rail'){
+    if(op==='fail'){mgEnd(G,p,0,'時間切れです。');return null}
+    if(op==='solve'){const g=a.grid;if(!Array.isArray(g)||g.length!==m.grid.length)return'正しくありません';
+      const same=g.every((v,i)=>{let x=m.grid[i];for(let k=0;k<4;k++){if(x===v)return true;x=railRot(x)}return false});
+      if(!same||!railTrace(g,m.s,m.e).ok)return'つながっていません';
+      const s=(Date.now()-m.t0)/1000,q=RAIL_T.find(x=>s<=x[0]);mgEnd(G,p,q?q[1]:0,`${s.toFixed(1)}秒でつなぎました。`);return null}}
+  return'知らない操作です'}
+/* 見せてよい情報だけに絞る（サーバー版） */
+function viewFor(G,seat){if(G.phase==='over')return G;const v=JSON.parse(JSON.stringify(G));v.deck=v.deck.map(()=>'?');
+  v.pl.forEach((p,i)=>{if(i!==seat){p.cards=p.cards.map(c=>({k:'?',t:c.t}));p.mg=null}else if(p.mg){delete p.mg.limit;if(p.mg.nx)p.mg.nx={tip:p.mg.nx.tip}}});return v}
+/* ---- CPU ---- */
+function nodeScore(G,n,o){const B=getB(),have=new Set();G.nodes.forEach((b,i)=>{if(b&&b.o===o)B.NF[i].forEach(f=>have.add(G.faces[f]))});
+  let v=0;const seen=new Set();B.NF[n].forEach(f=>{const t=G.faces[f];if(t==='waste')return;v+=blocked(G,f)?.4:1;if(G.pl[o].boost.includes(t))v+=.5;if(!have.has(t)&&!seen.has(t))v+=.7;seen.add(t)});
+  if(B.towns.some(w=>w.spots.includes(n)))v+=.6;return v+Math.random()*.2}
+const best=(a,f)=>{let m=null,v=-1e9;a.forEach(x=>{const s=f(x);if(s>v){v=s;m=x}});return m};
+function goalCost(G,o){if(legalFac(G,o).length&&count(G,o,'o')<LIMIT.fac&&count(G,o,'s')>=2)return COST.fac;if(legalSt(G,o).length&&count(G,o,'s')<LIMIT.st)return COST.st;if(legalHuts(G,o).length&&count(G,o,'h')<LIMIT.hut)return COST.hut;return COST.rail}
+function cpuRespond(G,seat){const o=G.offer,p=G.pl[seat];if(!canPay(p,o.want))return{t:'respond',ok:false};
+  const val=b=>KEYS.reduce((a,r)=>a+(b[r]||0)*(r==='money'?2:G.mk[r]),0),goal=goalCost(G,seat);
+  const spare=RES.every(r=>!o.want[r]||p.hand[r]-o.want[r]>=(goal[r]||0));
+  const lead=pubVP(G,o.from)>=G.target-2;return{t:'respond',ok:spare&&!lead&&val(o.give)>=val(o.want)}}
+function cpuAct(G,seat){
+  const p=G.pl[seat],B=getB();
+  if(G.offer&&seat!==G.offer.from)return cpuRespond(G,seat);
+  if(G.offer)return{t:'cancel'};
+  if(G.phase==='setup'){
+    if(G.step==='hut')return{t:'setupHut',n:best(setupHuts(G),n=>nodeScore(G,n,seat))};
+    return{t:'setupLine',e:best(legalLines(G,seat),e=>{const v=B.edges[e].find(x=>x!==G.lastHut);return B.NN[v].some(m=>G.nodes[m])?-1:nodeScore(G,v,seat)})}}
+  if(G.phase==='block')return{t:'block',f:best(B.faces.map((_,i)=>i).filter(f=>f!==G.block&&G.faces[f]!=='waste'),f=>{let v=Math.random()*.1;B.faces[f].v.forEach(n=>{const b=G.nodes[n];if(b)v+=(b.o===seat?-3:1+pubVP(G,b.o)*.2)*YIELD[b.k]});return v})};
+  const usable=p.cards.filter(c=>c.t<G.tick&&c.k!=='secret');
+  if(G.phase==='roll'){
+    if(!G.played&&usable.some(c=>c.k==='forecast')){const d=best([1,2,3,4,5,6],d=>{let v=Math.random();B.faces.forEach((f,i)=>{if(G.nums[i]===d&&G.faces[i]!=='waste'&&!blocked(G,i))f.v.forEach(n=>{const b=G.nodes[n];if(b&&b.o===seat)v+=YIELD[b.k]})});return v});return{t:'play',k:'forecast',d}}
+    return{t:'roll'}}
+  if(G.bridge>0){const ls=legalLines(G,seat);if(ls.length)return{t:'line',k:'rail',e:lineChoice(G,seat,ls)};return{t:'end'}}
+  if(p.mini<=G.turn)return{t:'mg',op:'auto',n:[0,3,3,6,6,9][Math.floor(Math.random()*6)]};
+  const ls=lines(G,seat)<LIMIT.line?legalLines(G,seat):[],hs=count(G,seat,'h')<LIMIT.hut?legalHuts(G,seat):[];
+  if(G.ap>0){
+    if(canPay(p,COST.fac)&&legalFac(G,seat).length&&count(G,seat,'o')<LIMIT.fac)return{t:'fac',n:best(legalFac(G,seat),n=>nodeScore(G,n,seat))};
+    if(canPay(p,COST.st)&&legalSt(G,seat).length&&count(G,seat,'s')<LIMIT.st)return{t:'st',n:best(legalSt(G,seat),n=>nodeScore(G,n,seat))};
+    if(p.ord<LIMIT.ord)for(let k=0;k<5;k++)if(visit(G,seat,k)&&canPay(p,G.orders[k]))return{t:'deliver',k};
+    if(p.hand.money>=ITEM&&p.boost.length<LIMIT.boost){const c=[];G.shop.forEach((s,k)=>{if(visit(G,seat,k))s.forEach(r=>{if(!p.boost.includes(r))c.push({k,r})})});
+      if(c.length){const x=best(c,o=>{let v=Math.random();G.nodes.forEach((b,n)=>{if(b&&b.o===seat)B.NF[n].forEach(f=>{if(G.faces[f]===o.r)v+=YIELD[b.k]})});return v});return{t:'item',k:x.k,r:x.r}}}
+    if(canPay(p,COST.seize)&&count(G,seat,'h')<LIMIT.hut&&legalSeize(G,seat).length)return{t:'seize',n:best(legalSeize(G,seat),n=>nodeScore(G,n,seat))};
+    if(canPay(p,COST.hut)&&hs.length)return{t:'hut',n:best(hs,n=>nodeScore(G,n,seat))};
+    if(canPay(p,COST.take)&&p.hand.money>=4&&lines(G,seat)<LIMIT.line&&legalTake(G,seat).length)return{t:'take',e:best(legalTake(G,seat),()=>Math.random())};
+    if(ls.length&&(!hs.length||lines(G,seat)<5)){if(canPay(p,COST.rail)&&p.hand.iron>=2&&p.hand.stone>=2)return{t:'line',k:'rail',e:lineChoice(G,seat,ls)};if(canPay(p,COST.dirt))return{t:'line',k:'dirt',e:lineChoice(G,seat,ls)}}
+    if(p.hand.coal>=3&&legalUpg(G,seat).length)return{t:'upg',e:legalUpg(G,seat)[0]}}
+  if(!G.played){if(usable.some(c=>c.k==='import')){const g=goalCost(G,seat),m=RES.filter(r=>p.hand[r]<(g[r]||0));return{t:'play',k:'import',r:[m[0]||'iron',m[1]||m[0]||'coal']}}
+    if(usable.some(c=>c.k==='bond')&&ls.length)return{t:'play',k:'bond'};
+    if(usable.some(c=>c.k==='survey'))return{t:'play',k:'survey'}}
+  const goal=goalCost(G,seat),miss=RES.filter(r=>p.hand[r]<(goal[r]||0));
+  if(G.mops<5){
+    if(miss.length&&p.hand.money>=G.mk[miss[0]]+(goal.money||0))return{t:'mbuy',r:miss[0]};
+    const sp=RES.filter(r=>p.hand[r]-(goal[r]||0)>=2);if(sp.length&&(miss.length||handN(p)>=10))return{t:'msell',r:best(sp,r=>G.mk[r]+p.hand[r]*.2)}}
+  if(canPay(p,COST.deed)&&p.deeds<LIMIT.deed&&!(goal.money&&!miss.length))return{t:'deed'};
+  if(canPay(p,COST.card)&&G.deck.length&&!miss.length&&p.hand.money>=5)return{t:'buy'};
+  return{t:'end'}}
+function lineChoice(G,o,ls){const B=getB();return best(ls,e=>{let v=Math.random()*.2;B.edges[e].forEach(n=>{if(!B.dead[n]&&!G.nodes[n]&&B.NN[n].every(m=>!G.nodes[m]))v+=nodeScore(G,n,o)});return v})}
+</script>
+
+<script id="ui">
+'use strict';
+/* ===== 画面とオンライン ===== */
+const PC=['var(--p0)','var(--p1)','var(--p2)','var(--p3)'];
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const ls={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
+const $=id=>document.getElementById(id);
+let G=null;
+const UI={screen:'title',name:ls.get('goka.name')||'',code:'',msg:'',size:4,map:1,target:10,mode:null,panel:null,give:{},want:{},card:null,r1:'wood',r2:'iron',toast:''};
+const NET={db:null,room:null,uid:null,pid:null,ready:false,tid:null,t:null,gr:null,unsub:null,peers:[],seen:{},writing:false,pendingW:false,open:[],stats:{},aid:0,local:false,wait:null,nextCpu:0};
+const SRV=!!(window.claude&&window.claude.server);
+const seatOf=()=>{if(NET.local){if(!G)return null;const i=G.pl.findIndex(p=>p.me);return i<0?null:i}if(!G||!NET.pid)return null;const i=G.pl.findIndex(p=>p.uid===NET.pid);return i<0?null:i};
+
+/* --- 通信 --- */
+async function boot(hot){
+  if(hot&&hot.G){G=hot.G;NET.local=true;UI.screen='game'}
+  render();setInterval(tick,300);
+  if(typeof window.claude?.use!=='function'){NET.ready=true;render();return}
+  const[db,room,user]=await Promise.all(['db','room','user'].map(n=>window.claude.use(n).catch(()=>null)));
+  NET.db=db;NET.room=room;NET.ready=true;
+  if(db&&room&&user){
+    NET.uid=await user.id();
+    const m=/^#t-([a-z0-9]{5})(?:-(p\d))?$/.exec(location.hash||'');
+    NET.pid=NET.uid+(!SRV&&m&&m[2]?'~'+m[2]:'');
+    db.collection('stats').onSnapshot(s=>{s.docs.forEach(d=>{const x=d.data();if(x&&x.n)NET.stats[x.n]=x});soft()},()=>{});
+    db.collection('tables').where('status','==','wait').limit(30).onSnapshot(s=>{const cut=Date.now()-6*3600e3;NET.open=s.docs.map(d=>d.data()).filter(t=>t&&t.created>cut);soft()},()=>{});
+    const code=m?m[1]:ls.get('goka.table');
+    if(code&&!G)resume(code,!!m)}
+  render()}
+async function resume(code,fromLink){
+  try{const s=await NET.db.doc('tables/'+code).get();
+    if(!s.exists){ls.del('goka.table');if(fromLink){UI.msg='その部屋は見つかりませんでした';render()}return}
+    const t=s.data();
+    if(t.seats.some(x=>x.uid===NET.pid)&&t.status!=='done')return enter(code);
+    if(fromLink){UI.code=code;if(UI.name)join(code);else{UI.msg='名前を入れて「部屋に入る」を押してください';render()}}
+  }catch(e){}}
+function needName(){const n=UI.name.trim().slice(0,10);if(!n){UI.msg='先に名前を入れてください';render();return null}UI.name=n;ls.set('goka.name',n);return n}
+async function createTable(){
+  const name=needName();if(!name||!NET.db)return;
+  const al='abcdefghjkmnpqrstuvwxyz23456789';let id='';for(let i=0;i<5;i++)id+=al[Math.floor(Math.random()*al.length)];
+  const t={id,status:'wait',seats:[{uid:NET.pid,name}],size:UI.size,map:UI.map,target:UI.target,created:Date.now(),updated:Date.now()};
+  try{await NET.db.doc('tables/'+id).set(t);await enter(id)}catch(e){UI.msg='部屋を作れませんでした（'+(e&&e.code||'error')+'）。このページの共有設定を確認してください';render()}}
+async function join(code){
+  const name=needName();if(!name||!NET.db)return;code=String(code||'').trim().toLowerCase();
+  if(!/^[a-z0-9]{5}$/.test(code)){UI.msg='部屋の合言葉は5文字です';render();return}
+  const s=await NET.db.doc('tables/'+code).get().catch(()=>null);
+  if(!s||!s.exists){UI.msg='その部屋は見つかりませんでした';render();return}
+  const t=s.data();
+  if(t.seats.some(x=>x.uid===NET.pid))return enter(code);
+  if(t.status!=='wait'||t.seats.length>=t.size){UI.msg='その部屋はもう始まっているか満席です';render();return}
+  await enter(code);
+  let n=0;clearInterval(NET.wait);
+  const ask=()=>{const seated=NET.t&&NET.t.seats.some(x=>x.uid===NET.pid);
+    if(seated||n++>7||NET.tid!==code){clearInterval(NET.wait);if(!seated&&NET.tid===code){UI.msg='席に着けませんでした。部屋を作った人がページを開いているか確認してください';leave()}return}
+    NET.gr&&NET.gr.emit('act',{sit:name,pid:NET.pid}).catch(()=>{})};
+  NET.wait=setInterval(ask,1500);setTimeout(ask,400)}
+async function enter(code){
+  NET.tid=code;ls.set('goka.table',code);UI.screen='lobby';UI.msg='';render();
+  try{NET.gr=await NET.room.join('t'+code)}catch(e){UI.msg='部屋につなげませんでした';leave();return}
+  NET.gr.onPeers(ch=>{NET.peers=ch.peers||[];const now=Date.now();NET.peers.forEach(p=>{if(p.presence&&p.presence.uid)NET.seen[p.presence.uid]=now});soft()},()=>{});
+  NET.gr.on('act',onAct,()=>{});
+  NET.gr.presence({uid:NET.pid}).catch(()=>{});
+  NET.unsub=NET.db.doc('tables/'+code).onSnapshot(onSnap,()=>{})}
+function onSnap(s){
+  if(!s.exists){if(NET.tid){UI.msg='部屋がなくなりました';leave()}return}
+  const t=s.data();if(!t||t.id!==NET.tid)return;
+  if(NET.t&&(t.rev||0)<(NET.t.rev||0))return;
+  NET.t=t;
+  if(t.G&&(!G||t.G.seq>=G.seq)){G=t.G;if(UI.screen==='lobby')UI.screen='game'}
+  render()}
+const present=()=>new Set(NET.peers.map(p=>p.presence&&p.presence.uid).filter(Boolean));
+function amHost(){if(SRV&&!NET.local)return false;if(NET.local)return true;if(!NET.t)return false;const pr=present();pr.add(NET.pid);const h=NET.t.seats.find(s=>pr.has(s.uid));return!!h&&h.uid===NET.pid}
+function isAway(p){if(!p.uid||NET.local)return false;if(p.uid===NET.pid)return false;if(present().has(p.uid))return false;return Date.now()-(NET.seen[p.uid]||NET.since||0)>20000}
+async function recordGame(){
+  if(SRV||NET.local||!G||G.phase!=='over'||NET.t.recorded||G.pl.filter(p=>p.uid).length<2)return;NET.t.recorded=true;
+  try{const ref=NET.db.doc('stats/n'+G.n),d=await ref.get(),x=d.exists?d.data():{n:G.n,games:0,wins:new Array(G.n).fill(0)};x.games++;x.wins[G.winner]++;await ref.set(x)}catch(e){}}
+async function save(){
+  if(NET.local||!NET.t||SRV)return;recordGame();
+  if(NET.writing){NET.pendingW=true;return}NET.writing=true;
+  try{do{NET.pendingW=false;NET.t.rev=(NET.t.rev||0)+1;NET.t.updated=Date.now();
+    if(G){NET.t.G=JSON.parse(JSON.stringify(G));NET.t.status=G.phase==='over'?'done':'play'}
+    await NET.db.doc('tables/'+NET.t.id).set(NET.t)}while(NET.pendingW)}
+  catch(e){UI.toast='保存できませんでした。通信を確認してください';soft()}
+  NET.writing=false}
+function onAct(m){
+  const d=m.data;if(!d||typeof d!=='object'||m.sameTab||!amHost())return;
+  if(d.sit&&NET.t&&NET.t.status==='wait'){
+    if(typeof d.pid!=='string'||NET.t.seats.some(s=>s.uid===d.pid)||NET.t.seats.length>=NET.t.size)return;
+    NET.t.seats.push({uid:d.pid,name:String(d.sit).slice(0,10)});save();render();return}
+  if(!G||!Number.isInteger(d.seat)||!G.pl[d.seat]||G.pl[d.seat].uid!==d.pid)return;
+  NET.done=NET.done||{};if(NET.done[d.aid])return;NET.done[d.aid]=1;
+  run(d.seat,d.a)}
+function run(seat,a){const e=apply(G,seat,a);if(e)return e;afterChange();return null}
+function afterChange(){UI.mode=G&&G.bridge>0?'rail':UI.mode;save();render()}
+function act(a){
+  const s=seatOf();if(s===null||!G)return;
+  if(amHost()){const e=run(s,a);if(e){UI.toast=e;soft()}return}
+  const aid=NET.pid.slice(-6)+'-'+(++NET.aid)+'-'+Date.now(),seq=G.seq,msg={seat:s,a,aid,pid:NET.pid};
+  let n=0;const send=()=>{if(!G||G.seq!==seq||n++>3)return;NET.gr&&NET.gr.emit('act',msg).catch(()=>{});setTimeout(send,1800)};send();
+  UI.mode=null;UI.panel=a.t==='offer'?null:UI.panel;soft()}
+function tick(){
+  if(!G||G.phase==='over'||UI.screen!=='game'||!amHost()||Date.now()<NET.nextCpu)return;
+  const auto=i=>G.pl[i].cpu||isAway(G.pl[i]);
+  let s=null;
+  if(G.offer){const w=G.pl.map((_,i)=>i).filter(i=>i!==G.offer.from&&!G.offer.no.includes(i));s=w.find(auto);if(s===undefined){s=auto(G.offer.from)?G.offer.from:null}}
+  else if(auto(G.cur))s=G.cur;
+  if(s===null||s===undefined)return;
+  const a=cpuAct(G,s),e=apply(G,s,a);
+  if(e&&s===G.cur&&!G.offer)apply(G,s,G.phase==='roll'?{t:'roll'}:{t:'end'});
+  NET.nextCpu=Date.now()+(a.t==='respond'?300:a.t==='earn'?100:750);save();render()}
+function leave(){
+  clearInterval(NET.wait);if(NET.unsub){NET.unsub();NET.unsub=null}
+  if(NET.gr){NET.gr.leave().catch(()=>{});NET.gr=null}
+  ls.del('goka.table');NET.tid=null;NET.t=null;NET.peers=[];NET.local=false;G=null;UI.screen='title';UI.mode=null;UI.panel=null;render()}
+function startOnline(){
+  const t=NET.t;if(SRV){NET.gr&&NET.gr.emit('act',{start:1}).catch(()=>{});return}if(!t||!amHost())return;
+  const seats=t.seats.map(s=>({...s}));while(seats.length<t.size)seats.push({name:'CPU'+(seats.length+1),cpu:true});
+  G=newGame({seats,target:t.target,map:t.map});UI.screen='game';save();render()}
+function startLocal(){
+  const name=UI.name.trim().slice(0,10)||'あなた';if(UI.name.trim())ls.set('goka.name',name);
+  const seats=[{name,me:true}];while(seats.length<UI.size)seats.push({name:'CPU'+(seats.length+1),cpu:true});
+  NET.local=true;G=newGame({seats,target:UI.target,map:UI.map});UI.screen='game';render()}
+
+/* --- 地図 --- */
+function boardSvg(g,opt={}){
+  const B=getB(),my=opt.seat,mode=opt.mode,xy=n=>[B.nodes[n].x,B.nodes[n].y],K='#140e20';
+  const cellP=f=>'M'+B.faces[f].poly.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join('L')+'Z';
+  const eP=e=>{const[a,b]=B.edges[e];return`M${xy(a).map(v=>v.toFixed(1))}L${xy(b).map(v=>v.toFixed(1))}`};
+  const rolled=g.dA!==null,hit=i=>rolled&&(g.faces[i]===RES[g.dB-1]||g.faces[i]===RES[g.dD-1])&&(g.nums[i]===g.dA||g.nums[i]===g.dC);let h='';
+  B.faces.forEach((f,i)=>{const t=g.faces[i],ink=t==='coal'||t==='waste'||t==='copper'?'#f3eee2':K,x=f.cx.toFixed(1),y=f.cy;
+    h+=`<path d="${cellP(i)}" fill="var(--${t})" fill-opacity="${rolled&&!hit(i)?.86:1}" stroke="${K}" stroke-width="2.5" stroke-linejoin="round"/>`;
+    const T=(yy,sz,tx)=>`<text x="${x}" y="${yy.toFixed(1)}" text-anchor="middle" dominant-baseline="central" font-size="${sz.toFixed(1)}" font-family="var(--disp)" font-weight="800" fill="${ink}">${tx}</text>`;
+    if(t==='waste'){h+=T(y,Math.min(30,f.inr*1.2),RG[t]);return}
+    if(f.inr>=31)h+=T(y-13,27,RG[t])+T(y+15,24,g.nums[i]);else{const z=Math.min(25,f.inr*.92);h+=T(y,z,RG[t]+g.nums[i])}});
+  B.faces.forEach((f,i)=>{if(hit(i))h+=`<path d="${cellP(i)}" fill="none" stroke="var(--brass)" stroke-width="8" stroke-linejoin="round"/>`});
+  h+=`<path d="M${B.star.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join('L')}Z" fill="none" stroke="var(--brass2)" stroke-width="7" stroke-linejoin="round"/>`;
+  if(g.block!==null){const f=B.faces[g.block];h+=`<path d="${cellP(g.block)}" fill="${K}" fill-opacity=".64"/><g transform="translate(${f.cx.toFixed(1)} ${f.cy.toFixed(1)})"><path d="M0 -24L24 18H-24Z" fill="var(--warn)" stroke="${K}" stroke-width="4"/><text y="11" text-anchor="middle" font-size="26" font-weight="800" fill="${K}">!</text></g>`}
+  B.nodes.forEach((p,n)=>{if(p.way)h+=`<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="4" fill="var(--paper)" stroke="${K}" stroke-width="2"/>`;else if(!B.dead[n]&&!g.nodes[n])h+=`<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="4.5" fill="${K}" fill-opacity=".55"/>`});
+  g.edges.forEach((o,e)=>{if(o===null)return;h+=g.ek[e]?`<path d="${eP(e)}" stroke="${K}" stroke-width="14" stroke-linecap="round"/><path d="${eP(e)}" stroke="${PC[o]}" stroke-width="9" stroke-linecap="round"/>`
+    :`<path d="${eP(e)}" stroke="${K}" stroke-width="10" stroke-linecap="round"/><path d="${eP(e)}" stroke="${PC[o]}" stroke-width="6" stroke-dasharray="9 9"/>`});
+  g.nodes.forEach((b,n)=>{if(!b)return;const[x,y]=xy(n),at=`translate(${x.toFixed(1)} ${y.toFixed(1)})`;
+    h+=b.k==='h'?`<path transform="${at} scale(.58)" d="M-20 20V-4L0 -24L20 -4V20Z" fill="${PC[b.o]}" stroke="${K}" stroke-width="6"/>`
+      :b.k==='s'?`<path transform="${at} scale(.9)" d="M-24 20V-6L0 -26L24 -6V20ZM-8 20V4H8V20Z" fill-rule="evenodd" fill="${PC[b.o]}" stroke="${K}" stroke-width="5"/>`
+      :`<path transform="${at} scale(.92)" d="M-28 24V-8L-12 4V-8L4 4V-32H20V24Z" fill="${PC[b.o]}" stroke="${K}" stroke-width="5"/>`});
+  B.towns.forEach((w,k)=>{const on=my!==undefined&&my!==null&&visit(g,my,k);h+=`<circle cx="${w.x.toFixed(1)}" cy="${w.y.toFixed(1)}" r="32" fill="${on?'var(--brass)':'var(--sea2)'}" stroke="var(--brass)" stroke-width="4"/><text x="${w.x.toFixed(1)}" y="${w.y.toFixed(1)}" text-anchor="middle" dominant-baseline="central" font-size="30" font-family="var(--disp)" font-weight="800" fill="${on?K:'var(--paper)'}">商</text>`});
+  if(['hut','setupHut','seize','st','fac'].includes(mode)){const ns={hut:legalHuts,setupHut:setupHuts,seize:legalSeize,st:legalSt,fac:legalFac}[mode](g,my);
+    ns.forEach(n=>{const[x,y]=xy(n).map(v=>v.toFixed(1));h+=`<circle class="pulse" cx="${x}" cy="${y}" r="13" fill="var(--paper)" stroke="${K}" stroke-width="3"/><circle data-n="${n}" cx="${x}" cy="${y}" r="30" fill="transparent" style="cursor:pointer"/>`})}
+  if(['dirt','rail','setupLine','upg','take'].includes(mode)){(mode==='upg'?legalUpg:mode==='take'?legalTake:legalLines)(g,my).forEach(e=>{h+=`<path class="pulse" d="${eP(e)}" stroke="var(--paper)" stroke-width="8" stroke-dasharray="11 9"/><path data-e="${e}" d="${eP(e)}" stroke="transparent" stroke-width="30" style="cursor:pointer"/>`})}
+  if(mode==='block'){B.faces.forEach((f,i)=>{if(i!==g.block&&!f.waste)h+=`<path data-f="${i}" d="${cellP(i)}" fill="var(--paper)" fill-opacity=".12" stroke="var(--paper)" stroke-width="2" style="cursor:pointer"/>`})}
+  const W=STAR_R*.951+42,T=STAR_R+42,D=STAR_R*.809+42;
+  return`<svg class="board" viewBox="${-W} ${-T} ${2*W} ${T+D}" role="img" aria-label="正五角形の地図、${B.faces.length}マス">${h}</svg>`}
+
+/* --- 画面 --- */
+function render(){
+  $('app').innerHTML=UI.screen==='game'&&G?gameView():UI.screen==='lobby'?lobbyView():UI.screen==='rules'?rulesView():titleView();
+  miniDraw();const sc=!!G&&UI.screen==='game'&&G.phase==='block'&&seatOf()===G.cur;if(sc&&!UI.sc)toBoard();UI.sc=sc}
+function toBoard(){if(window.innerWidth<=820)document.querySelector('.board')?.scrollIntoView({behavior:'smooth',block:'start'})}
+function soft(){const a=document.activeElement;if(a&&(a.tagName==='INPUT'||a.tagName==='SELECT'))return;render()}
+const sel=(id,label,opts,v)=>`<label class="grow" for="${id}">${label}<select id="${id}">${opts.map(([x,l])=>`<option value="${x}" ${v===x?'selected':''}>${l}</option>`).join('')}</select></label>`;
+function titleView(){
+  const on=NET.db&&NET.room&&NET.uid;
+  return`<div class="title"><div>
+    <h1>五角の商会</h1>
+    <p class="lead">正五角形の大陸に道を延ばす商会の勝負です。小屋から駅、工場へ育て、町商人から増産権を買い、相手の土の道や小屋を奪い合います。先に目標の点数へ届いた人が勝ちです。</p>
+    <div class="stack">
+      <label for="nm">名前<input id="nm" maxlength="10" value="${esc(UI.name)}" placeholder="10文字まで"></label>
+      <div class="row">
+                ${sel('sz','人数',[[2,'2人'],[3,'3人'],[4,'4人']],UI.size)}
+        ${sel('tg','勝利点',[[8,'8点'],[10,'10点'],[12,'12点']],UI.target)}
+      </div>
+      <div class="row">
+        <button class="btn main grow" data-a="create" ${on?'':'disabled'}>部屋を作る</button>
+        <button class="btn grow" data-a="local">CPUと遊ぶ</button>
+        <button class="btn grow" data-a="rules">遊び方</button>
+      </div>
+      ${UI.msg?`<p class="err">${esc(UI.msg)}</p>`:''}
+    </div>
+    ${on?`<div class="sheet">
+      <div class="row"><label class="grow" for="cd">合言葉で入る<input id="cd" maxlength="5" autocapitalize="off" value="${esc(UI.code)}" placeholder="5文字"></label><button class="btn" data-a="join">部屋に入る</button></div>
+      ${NET.open.length?`<div class="tables">${NET.open.slice(0,8).map(t=>`<div class="trow"><span>${esc(t.seats[0]&&t.seats[0].name)}の部屋　<span class="sub">${t.seats.length}/${t.size}人・${t.target}点</span></span><button class="btn" data-a="joinid" data-id="${esc(t.id)}">入る</button></div>`).join('')}</div>`:'<p class="sub">いま募集中の部屋はありません。「部屋を作る」で最初の部屋を開けます。</p>'}
+    </div>`:`<p class="sub" style="margin-top:14px">${NET.ready?'このページではオンライン対戦が使えません。CPUと遊べます。':'オンラインに接続しています'}</p>`}
+    ${statsView()}
+  </div>${boardSvg(demoFor(UI.map))}</div>`}
+function statsView(){const a=Object.values(NET.stats).filter(x=>x.games).sort((x,y)=>x.n-y.n);if(!a.length)return'';
+  return`<div class="sheet"><b>席ごとの勝ち数（人が2人以上の対局）</b><div class="tbl"><table><tr><th>人数</th><th>対局</th><th>勝ち数（1番手から）</th></tr>${a.map(x=>`<tr><td>${x.n}人</td><td>${x.games}</td><td>${x.wins.join('、')}</td></tr>`).join('')}</table></div></div>`}
+function lobbyView(){
+  const t=NET.t;if(!t)return`<p class="sub">部屋につないでいます</p>`;
+  const pr=present(),host=SRV?t.seats[0]&&t.seats[0].uid===NET.pid:amHost(),link=window.claude&&window.claude.server?location.origin+location.pathname+'#t-'+t.id:'';
+  return`<div class="stack" style="max-width:460px;margin:20px auto">
+    <h2 style="color:var(--brass);font-size:26px">部屋の準備</h2>
+    <p class="sub">この合言葉を友だちに伝えてください</p>
+    <div class="row" style="align-items:center"><span class="code">${esc(t.id)}</span><button class="btn" data-a="copy" data-v="${esc(link||t.id)}">${link?'招待リンクをコピー':'合言葉をコピー'}</button></div>
+    <div class="players">${t.seats.map((s,i)=>`<div class="pl"><i style="background:${PC[i]}"></i><span class="nm">${esc(s.name)}${s.uid===NET.pid?'（あなた）':''}</span><span class="st">${pr.has(s.uid)||s.uid===NET.pid?'接続中':'未接続'}</span></div>`).join('')}</div>
+    <p class="sub">${t.size}人のうち${t.seats.length}人が着席。空いた席にはCPUが入ります。勝利点は${t.target}点。</p>
+    ${UI.msg?`<p class="err">${esc(UI.msg)}</p>`:''}
+    <div class="row">${host?`<button class="btn main grow" data-a="start">この人数で始める</button>`:`<p class="sub grow">開始を待っています</p>`}<button class="btn" data-a="leave">部屋を出る</button></div></div>`}
+function promptText(me){
+  const g=G,n=g.pl[g.cur].name,mine=me===g.cur;
+  if(g.phase==='over')return['対局が終わりました',''];
+  if(g.offer&&g.offer.from===me)return['返事を待っています','相手が答えるまで待つか、提案を取り下げられます'];
+  if(!mine)return[`${n}の手番`,g.phase==='setup'?'最初の配置をしています':g.pl[g.cur].cpu?'CPUが考えています':'操作を待っています'];
+  if(g.phase==='setup')return g.step==='hut'?['小屋を置いてください','光っている点をタップします。ほかの建物の隣には置けません']:['土の道を敷いてください','いま置いた小屋から1本敷きます'];
+  if(g.phase==='roll')return['サイコロを振ってください','物資2個と番号2個が決まります'];
+  if(g.phase==='block')return['通行止めを動かしてください','選んだマスは物資が取れなくなります'];
+  if(g.bridge>0)return[`線路をあと${g.bridge}本ただで敷けます`,''];
+  return['あなたの手番',`残りの行動は${g.ap}回です`]}
+const costTxt=c=>KEYS.filter(r=>c[r]).map(r=>(r==='money'?'金':RG[r])+(c[r]>1||r==='money'?c[r]:'')).join(' ');
+function gameView(){
+  const g=G,me=seatOf(),mine=me===g.cur,p=me!==null?g.pl[me]:null,[t1,t2]=promptText(me);
+  let mode=null;if(mine&&!g.offer){if(g.phase==='setup')mode=g.step==='hut'?'setupHut':'setupLine';else if(g.phase==='block')mode='block';else if(g.phase==='main')mode=g.bridge>0?'rail':UI.mode}
+  let h=`<div class="game"><div class="boardwrap">${boardSvg(g,{seat:me,mode})}</div><div class="side">`;
+  h+=`<div class="prompt" style="--who:${PC[g.cur]}"><b>${esc(t1)}</b>${t2?`<p class="sub">${esc(t2)}</p>`:''}${UI.toast?`<p class="err">${esc(UI.toast)}</p>`:''}</div>`;
+  if(g.offer&&me!==null&&me!==g.offer.from&&!g.offer.no.includes(me)){const can=canPay(p,g.offer.want);
+    h+=`<div class="offer"><b>${esc(g.pl[g.offer.from].name)}からの提案</b><p>もらう：${esc(bagTxt(g.offer.give))}<br>渡す：${esc(bagTxt(g.offer.want))}</p><div class="row"><button class="btn main grow" data-a="yes" ${can?'':'disabled'}>${can?'取引する':'足りません'}</button><button class="btn grow" data-a="no">断る</button></div></div>`}
+  if(g.dA!==null)h+=`<div class="dice"><b>${RN[RES[g.dB-1]]}</b><b>${RN[RES[g.dD-1]]}</b><b>${g.dA}</b><b>${g.dC}</b>${g.dA===g.dC?'<span class="sub">ゾロ目</span>':''}</div>`;
+  if(p)h+=`<div class="purse"><span class="sub">所持金</span><b>${p.hand.money}</b></div><div class="hand">${RES.map(r=>`<div class="res r-${r}"><b>${p.hand[r]}</b><span>${RN[r]}</span></div>`).join('')}</div>`;
+  if(mine&&g.phase==='roll')h+=`<button class="btn main" data-a="roll">サイコロを振る</button>`;
+  if(mine&&g.offer)h+=`<button class="btn" data-a="cancel">提案を取り下げる</button>`;
+  if(mine&&g.phase==='main'&&!g.offer){
+    const b=(k,l,c,en)=>`<button class="btn ${UI.mode===k?'on':''}" data-a="mode" data-m="${k}" ${en&&g.ap>0?'':'disabled'}>${l}<small>${costTxt(c)}</small></button>`,road=lines(g,me)<LIMIT.line,mOk=p.mini<=g.turn;
+    h+=`<div class="acts">
+      ${b('dirt','土の道',COST.dirt,canPay(p,COST.dirt)&&road&&legalLines(g,me).length)}
+      ${b('rail','線路',COST.rail,canPay(p,COST.rail)&&road&&legalLines(g,me).length)}
+      ${b('upg','線路へ強化',COST.upg,canPay(p,COST.upg)&&legalUpg(g,me).length)}
+      ${b('take','道を乗っ取る',COST.take,canPay(p,COST.take)&&road&&legalTake(g,me).length)}
+      ${b('hut','小屋 0点',COST.hut,canPay(p,COST.hut)&&count(g,me,'h')<LIMIT.hut&&legalHuts(g,me).length)}
+      ${b('seize','小屋を奪う',COST.seize,canPay(p,COST.seize)&&count(g,me,'h')<LIMIT.hut&&legalSeize(g,me).length)}
+      ${b('st','駅 2点',COST.st,canPay(p,COST.st)&&count(g,me,'s')<LIMIT.st&&legalSt(g,me).length)}
+      ${b('fac','工場 3点',COST.fac,canPay(p,COST.fac)&&count(g,me,'o')<LIMIT.fac&&legalFac(g,me).length)}
+      <button class="btn" data-a="deed" ${canPay(p,COST.deed)&&p.deeds<LIMIT.deed?'':'disabled'}>権利書 1点<small>${costTxt(COST.deed)}・残り${LIMIT.deed-p.deeds}枚</small></button>
+      <button class="btn" data-a="buy" ${canPay(p,COST.card)&&g.deck.length?'':'disabled'}>契約書<small>${costTxt(COST.card)}</small></button>
+      <button class="btn" data-a="mini" ${mOk?'':'disabled'}>ミニゲーム<small>${mOk?'最大9稼げる':`あと${p.mini-g.turn}周`}</small></button>
+      <button class="btn ${UI.panel==='town'?'on':''}" data-a="panel" data-p="town">町商人</button>
+      <button class="btn ${UI.panel==='market'?'on':''}" data-a="panel" data-p="market">市場で売買</button>
+      <button class="btn ${UI.panel==='trade'?'on':''}" data-a="panel" data-p="trade">相手と取引</button>
+      <button class="btn main wide" data-a="end">手番を終える</button></div>`}
+  if(mine&&g.phase==='main'&&UI.panel==='town'&&!g.offer){
+    h+=`<div class="box"><h3>町商人</h3><p class="sub">角のマスまで道か建物が届いた町を使えます。どちらも行動を1回使います。増産権は1人${LIMIT.boost}枚までです。</p>${g.shop.map((s,k)=>{const on=visit(g,me,k);
+      return`<div class="town"><b>町${k+1}${on?'':'（未到達）'}</b><div class="cardrow">${s.map(r=>`<button class="btn" data-a="item" data-k="${k}" data-r="${r}" ${on&&g.ap>0&&p.hand.money>=ITEM&&p.boost.length<LIMIT.boost&&!p.boost.includes(r)?'':'disabled'}>${RN[r]}の増産権<small>金${ITEM}・生産2倍</small></button>`).join('')||'<span class="sub">増産権は売り切れです</span>'}<button class="btn" data-a="deliver" data-k="${k}" ${on&&g.ap>0&&p.ord<LIMIT.ord&&canPay(p,g.orders[k])?'':'disabled'}>納品${costTxt(g.orders[k])}<small>+1点・金${ORDER_PAY}</small></button></div></div>`}).join('')}</div>`}
+  if(mine&&g.phase==='main'&&UI.panel==='market'&&!g.offer){
+    h+=`<div class="box"><h3>市場</h3>${RES.map(r=>`<div class="mk"><span>${RN[r]}</span><button class="btn" data-a="mbuy" data-r="${r}" ${p.hand.money>=g.mk[r]?'':'disabled'}>${g.mk[r]}で買う</button><button class="btn" data-a="msell" data-r="${r}" ${p.hand[r]>0?'':'disabled'}>${sellP(g,r)}で売る</button></div>`).join('')}<p class="sub">買うと値上がりし、売ると値下がりします。全員の手番が一周すると元の値段に近づきます。</p></div>`}
+  if(mine&&g.phase==='main'&&UI.panel==='trade'&&!g.offer){
+    const pm=(b,r)=>`<div class="pm"><button data-a="tr" data-b="${b}" data-r="${r}" data-d="-1" aria-label="${RN[r]}を減らす">−</button><span>${UI[b][r]||0}</span><button data-a="tr" data-b="${b}" data-r="${r}" data-d="1" aria-label="${RN[r]}を増やす">＋</button></div>`;
+    h+=`<div class="box"><h3>相手と取引</h3><div class="step"><span></span><span class="sub">渡す</span><span class="sub">欲しい</span></div>${KEYS.map(r=>`<div class="step"><span>${RN[r]}</span>${pm('give',r)}${pm('want',r)}</div>`).join('')}<button class="btn main" data-a="offer">全員に提案する（残り${3-g.offers}回）</button></div>`}
+  if(p&&p.cards.length){const use=c=>mine&&!g.played&&c.t<g.tick&&c.k!=='secret'&&(g.phase==='main'||g.phase==='roll')&&!g.offer&&!(c.k==='forecast'&&g.phase!=='roll')&&!(c.k==='bond'&&g.phase!=='main');
+    h+=`<div class="box"><h3>契約書</h3><div class="cardrow">${p.cards.map(c=>`<button class="btn ${UI.card===c.k?'on':''}" data-a="card" data-k="${c.k}" ${use(c)?'':'disabled'} title="${esc(CARD[c.k].d)}">${CARD[c.k].n}<small>${c.k==='secret'?'+1点':c.t>=g.tick?'次の手番から':''}</small></button>`).join('')}</div>`;
+    if(UI.card&&mine)h+=cardPanel();h+=`</div>`}
+  h+=`<div class="box"><h3>商会（${g.target}点で勝ち）</h3><div class="players">${g.pl.map((q,i)=>`<div class="pl ${i===g.cur?'cur':''}"><i style="background:${PC[i]}"></i><div style="min-width:0"><div class="nm">${esc(q.name)}${i===me&&q.name!=='あなた'?'（あなた）':''}${isAway(q)?' 離席':''}</div><div class="st">物資${handN(q)}　金${q.hand.money}　契約${q.cards.length}　道${lines(g,i)}/${LIMIT.line}${q.boost.length?'　増産'+q.boost.map(r=>RG[r]).join(''):''}</div></div><span class="vp">${i===me?fullVP(g,i):pubVP(g,i)}</span></div>`).join('')}</div></div>`;
+  h+=`<div class="box"><h3>記録</h3><div class="log" aria-live="polite">${g.log.slice().reverse().slice(0,30).map(m=>`<p>${esc(m)}</p>`).join('')}</div></div>`;
+  h+=`<div class="row"><button class="btn" data-a="rules">遊び方</button>${NET.local?'<button class="btn" data-a="leave">やめる</button>':me!==null?'<button class="btn" data-a="quit">席を立つ（CPUに任せる）</button>':'<button class="btn" data-a="leave">観戦をやめる</button>'}</div></div></div>`;
+  if(g.phase==='over'){const rank=g.pl.map((q,i)=>({q,i,v:fullVP(g,i)})).sort((a,b)=>b.v-a.v);
+    h+=`<div class="over"><div><h2>${esc(g.pl[g.winner].name)}の勝ち</h2>${rank.map(x=>`<div class="pl"><i style="background:${PC[x.i]}"></i><span class="nm">${esc(x.q.name)}</span><span class="vp">${x.v}点</span></div>`).join('')}<p class="sub">隠し資産も点数に入っています</p><button class="btn main" data-a="leave">表紙へ戻る</button></div></div>`}
+  return h}
+function cardPanel(){const k=UI.card,opt=v=>RES.map(r=>`<option value="${r}" ${v===r?'selected':''}>${RN[r]}</option>`).join('');
+  if(k==='forecast')return`<p class="sub">${CARD.forecast.d}</p><div class="cardrow">${[1,2,3,4,5,6].map(d=>`<button class="btn" data-a="forecast" data-d="${d}">${d}</button>`).join('')}</div>`;
+  if(k==='import')return`<p class="sub">${CARD.import.d}</p><div class="row"><label class="grow" for="m1">1つ目<select id="m1">${opt(UI.r1)}</select></label><label class="grow" for="m2">2つ目<select id="m2">${opt(UI.r2)}</select></label><button class="btn main" data-a="import">もらう</button></div>`;
+  return`<p class="sub">${CARD[k].d}</p><button class="btn main" data-a="usecard">使う</button>`}
+function rulesView(){return`<div class="rules"><h2>遊び方</h2>
+  <p>正五角形の大陸で、先に勝利点（ふつうは10点）を集めた商会の勝ちです。</p>
+  <h3>盤面</h3><ul><li>物資は8種類です。回収できない荒地は中央の1マスだけで、荒地に触れる点には建てられません</li><li>建てられる点は、どこもちょうど3マスの物資に触れています</li><li>外周も道を通せます。外周の白い点は通過するだけで、建物は置けません</li><li>5つの角に町商人がいます</li></ul>
+  <h3>はじめ</h3><ul><li>手番の順番は、対局を始めるときに毎回ランダムで決まります</li><li>順番に小屋と土の道を1組ずつ置きます。2周目は逆の順番です</li><li>2つ目の小屋に触れる3マスから最初の物資をもらいます。お金は全員4から始まります</li></ul>
+  <h3>手番</h3><ul><li>サイコロを4個振ります。物資のサイコロ2個（8面）と番号のサイコロ2個（6面）です</li><li>出た物資のどちらかで、出た番号のどちらかのマスに触れる建物が物資を生みます。小屋は1個、駅は2個、工場は3個です</li><li>手番の人が何ももらえなかったときは、補助金としてお金を1もらいます</li><li>行動は1手番に${AP}回までです。道、建物、町商人が行動を使います。市場、取引、契約書、権利書、ミニゲームは行動を使いません</li></ul>
+  <h3>ゾロ目</h3><ul><li>番号の2個が同じなら、振った本人だけがお金を${ZORO}もらいます。物資の2個もそろえば${ZORO3}もらえます</li><li>振った人は通行止めを動かせます。止めたマスは物資が出なくなり、そばの相手から物資を1つもらえます</li><li>番号がゾロ目のとき、物資を14個以上持つ人は半分を失います</li></ul>
+  <h3>建物</h3><div class="tbl"><table><tr><th>建物</th><th>費用</th><th>点</th><th>生産</th></tr>
+    <tr><td>小屋</td><td>食料・塩</td><td>0点</td><td>1個</td></tr><tr><td>駅（小屋から）</td><td>石材・鉄・綿2・銅・お金2</td><td>2点</td><td>2個</td></tr><tr><td>工場（駅から）</td><td>鉄2・石炭・銅2・塩2・食料・お金4</td><td>3点</td><td>3個</td></tr></table></div>
+  <ul><li>相手の小屋は、自分の道がつながっていれば費用の2倍（食料2・塩2）で奪えます。駅と工場は奪えません</li></ul>
+  <h3>道</h3><div class="tbl"><table><tr><th>道</th><th>費用</th><th>特徴</th></tr>
+    <tr><td>土の道</td><td>木材</td><td>安いけれど乗っ取られます</td></tr><tr><td>線路</td><td>石材・鉄</td><td>乗っ取られません</td></tr><tr><td>線路へ強化</td><td>石炭</td><td>自分の土の道を線路にします</td></tr><tr><td>乗っ取り</td><td>石材・鉄・お金2</td><td>自分の道につながる相手の土の道を奪い、線路にします</td></tr></table></div>
+  <h3>町商人</h3><ul><li>角のマスに触れる点まで道か建物が届くと、その町を使えます</li><li><b>増産権</b>（お金${ITEM}）その物資の生産が2倍になります。1人2枚まで、各町の在庫限りです</li><li><b>納品</b> 注文の物資を渡すと1点とお金${ORDER_PAY}をもらえます。1人3点までです</li></ul>
+  <h3>お金</h3><ul><li>お金は全員4から始まります。市場の売値は買値の半分です。買うと値上がりし、売ると値下がりします</li><li>権利書はお金12で1点、1人2枚までです。契約書は綿・食料・お金2です</li><li>ミニゲームは${MINI_GAP}周に1回だけ遊べます。荷車の積み込み、七日の相場、線路つなぎから選べて、最大9稼げます</li></ul>
+  <h3>取引</h3><ul><li>手番の人は全員に物資とお金の取引を提案できます。最初に受けた人と成立します</li></ul>
+  <h3>契約書</h3><ul>${Object.values(CARD).map(c=>`<li><b>${c.n}</b>（${c.c}枚）${c.d}</li>`).join('')}</ul>
+  <div><button class="btn main" data-a="back">戻る</button></div></div>`}
+
+/* --- ミニゲーム（#mini に出すので、対局の更新で消えない） --- */
+const MINI={menu:false,key:'',rail:null,raf:0,sent:false};
+const miniBox=h=>{$('mini').innerHTML=`<div class="over"><div>${h}</div></div>`};
+function miniClear(){if(MINI.key){cancelAnimationFrame(MINI.raf);MINI.key='';$('mini').innerHTML=''}MINI.rail=null}
+function miniDraw(){
+  const s=UI.screen==='game'&&G?seatOf():null,m=s!==null&&s>=0&&G.pl[s]?G.pl[s].mg:null;
+  if(!m&&!MINI.menu)return miniClear();
+  if(m)MINI.menu=false;
+  const key=m?JSON.stringify(m):'menu';if(key===MINI.key)return;MINI.key=key;
+  if(!m)return miniBox(`<h2>ミニゲーム</h2><p class="sub">${MINI_GAP}周に1回の大仕事です。始めると途中ではやめられません。最大9稼げます。</p>
+    <button class="btn main" data-a="m-cart">荷車の積み込み<small>限界の分からない荷車に、どこまで積むか</small></button>
+    <button class="btn main" data-a="m-trade">七日の相場<small>当たるとは限らない噂を頼りに売り買いする</small></button>
+    <button class="btn main" data-a="m-rail">線路つなぎ<small>線路を回して、時間内に町までつなぐ</small></button>
+    <button class="btn" data-a="m-x">やめる</button>`);
+  if(m.done){cancelAnimationFrame(MINI.raf);return miniBox(`<h2>${m.n}稼ぎました</h2><p>${esc(m.msg)}</p><button class="btn main" data-a="m-ok">受け取る</button>`)}
+  if(m.g==='cart')return miniBox(`<h2>荷車の積み込み</h2><p class="sub">荷車の限界は重さ7〜12のどこかです。超えると壊れて、価値の3分の1しか残りません。</p>
+    <div class="track"><div class="zone" style="left:${7/13*100}%;width:${6/13*100}%;background:var(--warn)"></div><div class="mark" style="left:${m.load/13*100}%"></div></div>
+    <p>重さ <b>${m.load}</b>　価値 <b>${m.val}</b>（9まで）</p>
+    <div class="row">${m.offer.map((c,i)=>`<button class="btn main grow" data-a="m-pick" data-i="${i}">${c[0]}を積む<small>重さ${c[1]}・価値${c[2]}</small></button>`).join('')}</div>
+    <button class="btn" data-a="m-go" ${m.load?'':'disabled'}>ここで出発する</button>`);
+  if(m.g==='trade'){const chart=`<svg viewBox="0 0 280 70" style="width:100%;height:auto;display:block" aria-hidden="true"><polyline fill="none" stroke="var(--brass)" stroke-width="3" stroke-linejoin="round" points="${m.hist.map((v,i)=>`${10+i*43},${64-v*5}`).join(' ')}"/>${m.hist.map((v,i)=>`<circle cx="${10+i*43}" cy="${64-v*5}" r="4" fill="var(--paper)"/>`).join('')}</svg>`;
+    return miniBox(`<h2>七日の相場　${m.day}日目</h2>${chart}<p>値段 <b>${m.price}</b>　手元 <b>${m.cash}</b>　在庫 <b>${m.stock}</b></p>
+    <p class="sub">噂：明日は${m.nx.tip>0?'上がる':'下がる'}らしい（噂は7割当たります）</p>
+    <div class="row"><button class="btn main grow" data-a="m-buy" ${m.cash>=m.price?'':'disabled'}>1つ買う</button><button class="btn main grow" data-a="m-sell" ${m.stock?'':'disabled'}>1つ売る</button></div>
+    <button class="btn" data-a="m-next">${m.day<7?'次の日へ':'相場を閉じる'}</button>`)}
+  if(m.g==='rail'){if(!MINI.rail||MINI.rail.t0!==m.t0){MINI.rail={t0:m.t0,g:m.grid.slice(),s:m.s,e:m.e,start:performance.now()};MINI.sent=false}railDraw();cancelAnimationFrame(MINI.raf);MINI.raf=requestAnimationFrame(railLoop)}}
+function railSvg(){const b=MINI.rail,S=70,mid=S/2,W=S*RN4,lit=railTrace(b.g,b.s,b.e).lit;
+  const pathOf=m=>{const p={1:[mid,0],2:[S,mid],4:[mid,S],8:[0,mid]},k=[1,2,4,8].filter(x=>m&x);return`M${p[k[0]]}Q${mid},${mid} ${p[k[1]]}`};let h='';
+  b.g.forEach((m,i)=>{const x=(i%RN4)*S,y=Math.floor(i/RN4)*S;h+=`<g transform="translate(${x} ${y})" data-a="m-tile" data-i="${i}" style="cursor:pointer"><rect x="2" y="2" width="${S-4}" height="${S-4}" rx="6" fill="var(--sea)" stroke="var(--line)"/><path d="${pathOf(m)}" fill="none" stroke="${lit.includes(i)?'var(--brass)':'var(--mute)'}" stroke-width="11"/></g>`});
+  const a=b.s*S+mid,z=b.e*S+mid;return`<svg viewBox="-26 0 ${W+52} ${W}" style="width:100%;height:auto;display:block;touch-action:manipulation"><path d="M-22 ${a}H2" stroke="var(--brass)" stroke-width="11"/><path d="M${W-2} ${z}H${W+22}" stroke="var(--wood)" stroke-width="11"/>${h}</svg>`}
+function railDraw(){miniBox(`<h2>線路つなぎ</h2><p class="sub">マスを押すと線路が回ります。左の金色から右の緑までつなげてください。15秒以内で9、25秒以内で6、40秒以内で3です。</p><div class="track" style="height:14px"><div class="zone" id="rl" style="left:0;width:100%"></div></div>${railSvg()}`)}
+function railLoop(t){const b=MINI.rail,el=$('rl');if(!b||!el)return;const s=(t-b.start)/1000;if(s>=40){if(!MINI.sent){MINI.sent=true;act({t:'mg',op:'fail'})}return}el.style.width=(100-s/40*100)+'%';MINI.raf=requestAnimationFrame(railLoop)}
+function railTap(i){const b=MINI.rail;if(!b||MINI.sent)return;b.g[i]=railRot(b.g[i]);railDraw();if(railTrace(b.g,b.s,b.e).ok){MINI.sent=true;act({t:'mg',op:'solve',grid:b.g})}}
+
+/* --- 操作 --- */
+document.addEventListener('input',e=>{const t=e.target;if(t.id==='nm')UI.name=t.value;if(t.id==='cd')UI.code=t.value});
+document.addEventListener('change',e=>{const t=e.target,v=t.value;
+  if(t.id==='sz')UI.size=+v;if(t.id==='tg')UI.target=+v;if(t.id==='mp'){UI.map=+v;render()}if(t.id==='m1')UI.r1=v;if(t.id==='m2')UI.r2=v});
+document.addEventListener('click',e=>{
+  const s=e.target.closest('[data-n],[data-e],[data-f]');
+  if(s&&G&&s.dataset.a===undefined){const d=s.dataset;UI.toast='';
+    if(d.n!==undefined){const n=+d.n;act(G.phase==='setup'?{t:'setupHut',n}:{t:UI.mode,n});UI.mode=null}
+    else if(d.e!==undefined){const x=+d.e;const m=G.bridge>0?'rail':UI.mode;act(G.phase==='setup'?{t:'setupLine',e:x}:m==='upg'||m==='take'?{t:m,e:x}:{t:'line',k:m,e:x});if(!G.bridge)UI.mode=null}
+    else act({t:'block',f:+d.f});
+    soft();return}
+  const b=e.target.closest('[data-a]');if(!b)return;const a=b.dataset.a,d=b.dataset;UI.toast='';
+  const go={create:createTable,local:startLocal,join:()=>join(UI.code),joinid:()=>join(d.id),start:startOnline,leave,
+    rules(){UI.prev=UI.screen;UI.screen='rules';render();scrollTo(0,0)},back(){UI.screen=UI.prev||'title';render()},
+    copy(){const v=d.v;navigator.clipboard?.writeText(v).then(()=>{b.textContent='コピーしました'}).catch(()=>{b.textContent=v})},
+    roll(){act({t:'roll'})},end(){UI.mode=null;UI.panel=null;UI.card=null;act({t:'end'})},buy(){act({t:'buy'})},deed(){act({t:'deed'})},cancel(){act({t:'cancel'})},
+    yes(){act({t:'respond',ok:true})},no(){act({t:'respond',ok:false})},
+    mode(){UI.mode=UI.mode===d.m?null:d.m;render();if(UI.mode)toBoard()},panel(){UI.panel=UI.panel===d.p?null:d.p;render()},
+    item(){act({t:'item',k:+d.k,r:d.r})},deliver(){act({t:'deliver',k:+d.k})},mbuy(){act({t:'mbuy',r:d.r})},msell(){act({t:'msell',r:d.r})},
+    tr(){const o=UI[d.b];o[d.r]=Math.max(0,Math.min(d.r==='money'?50:9,(o[d.r]||0)+ +d.d));render()},
+    offer(){act({t:'offer',give:UI.give,want:UI.want});UI.give={};UI.want={};UI.panel=null;soft()},
+    card(){UI.card=UI.card===d.k?null:d.k;render()},
+    usecard(){const k=UI.card;UI.card=null;act({t:'play',k});toBoard()},
+    forecast(){UI.card=null;act({t:'play',k:'forecast',d:+d.d})},
+    import(){UI.card=null;act({t:'play',k:'import',r:[UI.r1,UI.r2]})},
+    mini(){MINI.menu=true;render()},'m-x'(){MINI.menu=false;render()},'m-cart'(){act({t:'mg',op:'start',g:'cart'})},'m-trade'(){act({t:'mg',op:'start',g:'trade'})},'m-rail'(){act({t:'mg',op:'start',g:'rail'})},'m-pick'(){act({t:'mg',op:'pick',i:+d.i})},'m-go'(){act({t:'mg',op:'go'})},'m-buy'(){act({t:'mg',op:'buy'})},'m-sell'(){act({t:'mg',op:'sell'})},'m-next'(){act({t:'mg',op:'next'})},'m-tile'(){railTap(+d.i)},'m-ok'(){act({t:'mg',op:'close'})},
+    quit(){act({t:'resign'});setTimeout(leave,700)}};
+  if(go[a])go[a]();if(!a.startsWith('m-')&&a!=='mini')soft()});
+const DEMO={};
+function demoFor(m){if(DEMO[m])return DEMO[m];
+  const g=newGame({seats:[{name:'a'},{name:'b'},{name:'c'}],map:m});g.phase='demo';
+  for(let i=0;i<6;i++){const c=setupHuts(g),n=c[Math.floor((i*.17+.08)*c.length)];g.nodes[n]={o:i%3,k:i===4?'o':'h'};const B=getB();g.edges[B.NE[n][0]]=i%3}
+  return DEMO[m]=g}
+window.claude?.hot?.snapshot?.(()=>({G:NET.local?G:null}));
+NET.since=Date.now();
+window.claude?.hot?.ready?window.claude.hot.ready(boot):boot(window.claude?.hot?.data??{});
+</script>
+
+
+
+
+
+
+
+
