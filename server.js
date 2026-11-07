@@ -1,4 +1,4 @@
-// 五角の商会 — 自前サーバー
+// Tänk!（テンク） — 自前サーバー
 // ルールは seigokaku.html の engine をそのまま読み込み、対局の判定はすべてここで行う。
 // ブラウザは操作を送るだけで、サイコロ、ミニゲームの答え、相手の隠し情報は受け取らない。
 'use strict';
@@ -174,7 +174,7 @@ function createTable(c, p, d) {
   if (Date.now() - c.lastTable < 3000) return 'too_fast';
   let n = 0; for (const k of docs.keys()) if (k.startsWith('tables/')) n++;
   if (n >= MAX_TABLES) return 'full';
-  const size = [2, 3, 4].includes(d.size) ? d.size : 4, target = [8, 10, 12].includes(d.target) ? d.target : 10;
+  const size = [2, 3, 4].includes(d.size) ? d.size : 4, target = [16, 20, 24].includes(d.target) ? d.target : 20;
   const name = cleanName(d.seats && d.seats[0] && d.seats[0].name);
   c.lastTable = Date.now();
   docs.set(p, { id, status: 'wait', seats: [{ uid: c.uid, name }], size, map: 1, target, created: Date.now(), updated: Date.now(), rev: 1 });
