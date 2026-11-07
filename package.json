@@ -2,7 +2,7 @@
   "name": "goka-shokai",
   "version": "1.0.0",
   "private": true,
-  "description": "五角の商会 — オンライン対戦サーバー",
+  "description": "Tänk!（テンク） — オンライン対戦サーバー",
   "main": "server.js",
   "scripts": { "start": "node server.js" },
   "engines": { "node": ">=18" },
