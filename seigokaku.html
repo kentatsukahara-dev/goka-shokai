@@ -1,13 +1,13 @@
-<title>五角の商会</title>
+<title>Tänk! テンク</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@600;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Uncial+Antiqua&family=Shippori+Mincho+B1:wght@600;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
 <style>
-/* 配置の考え方: 夜空に浮かぶ正五角形の大陸の地図を広げた画面。左（スマホでは上）に地図、右に商会の帳場。 */
+/* 配置の考え方: 霧の森の石机に、組み紐で縁取った正五角形の古地図を広げた画面。左（スマホでは上）に地図、右に商会の帳場。 */
 :root{
-  --sea:#211932; --sea2:#2e2446; --sea3:#3f3360; --line:#5f5189;
-  --brass:#f1b84f; --brass2:#b98a35; --paper:#f6f0e2; --mute:#c3b9d8;
-  --warn:#ffb46b; --dark:#140e20;
+  --sea:#14231d; --sea2:#1f352b; --sea3:#2d4a3c; --line:#55796a;
+  --brass:#dcb860; --brass2:#a98838; --paper:#f1e9d4; --mute:#b9c7b4;
+  --warn:#ffb46b; --dark:#0d1813;
   --wood:#5f9a58; --stone:#a7a49a; --iron:#6f93b8; --coal:#4b4650; --cotton:#ece4d2; --food:#dcb648; --copper:#b5653a; --salt:#b9d6e0; --waste:#7a6248;
   --p0:#ff7a5c; --p1:#ffd34d; --p2:#6fd0ff; --p3:#e39bff;
   --disp:"Shippori Mincho B1","Hiragino Mincho ProN","Yu Mincho",serif;
@@ -85,7 +85,7 @@ label{display:grid;gap:4px;font-size:13px;color:var(--mute)}
 .tbl{overflow-x:auto}
 .tbl table{border-collapse:collapse;width:100%;font-size:14px}
 .tbl td,.tbl th{border-bottom:1px solid var(--sea3);padding:5px 8px;text-align:left}
-.over{position:fixed;inset:0;background:rgba(16,10,28,.84);display:grid;place-items:center;z-index:20;padding:16px}
+.over{position:fixed;inset:0;background:rgba(7,14,11,.86);display:grid;place-items:center;z-index:20;padding:16px}
 .over>div{background:var(--sea2);border:1px solid var(--brass);border-radius:8px;padding:20px;max-width:420px;width:100%;display:grid;gap:10px}
 .over h2{color:var(--brass);font-size:26px}
 .track{position:relative;height:44px;background:var(--sea);border:1px solid var(--line);border-radius:6px;overflow:hidden}
@@ -104,6 +104,23 @@ label{display:grid;gap:4px;font-size:13px;color:var(--mute)}
   .boardwrap{position:static}
   .board{max-height:none}
 }
+/* ケルトの雰囲気: 霧、組み紐、三つ巴の渦 */
+:root{--knot:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='24' viewBox='0 0 40 24'%3E%3Cpolyline points='-2.0,14.16 -1.0,13.10 0.0,12.00 1.0,10.90 2.0,9.84 3.0,8.82 4.0,7.89 5.0,7.05 6.0,6.34 7.0,5.76 8.0,5.34 9.0,5.09 10.0,5.00 11.0,5.09 12.0,5.34 13.0,5.76 14.0,6.34 15.0,7.05 16.0,7.89 17.0,8.82 18.0,9.84 19.0,10.90 20.0,12.00 21.0,13.10 22.0,14.16 23.0,15.18 24.0,16.11 25.0,16.95 26.0,17.66 27.0,18.24 28.0,18.66 29.0,18.91 30.0,19.00 31.0,18.91 32.0,18.66 33.0,18.24 34.0,17.66 35.0,16.95 36.0,16.11 37.0,15.18 38.0,14.16 39.0,13.10 40.0,12.00 41.0,10.90 42.0,9.84' fill='none' stroke='%230c1712' stroke-width='6.4'/%3E%3Cpolyline points='-2.0,14.16 -1.0,13.10 0.0,12.00 1.0,10.90 2.0,9.84 3.0,8.82 4.0,7.89 5.0,7.05 6.0,6.34 7.0,5.76 8.0,5.34 9.0,5.09 10.0,5.00 11.0,5.09 12.0,5.34 13.0,5.76 14.0,6.34 15.0,7.05 16.0,7.89 17.0,8.82 18.0,9.84 19.0,10.90 20.0,12.00 21.0,13.10 22.0,14.16 23.0,15.18 24.0,16.11 25.0,16.95 26.0,17.66 27.0,18.24 28.0,18.66 29.0,18.91 30.0,19.00 31.0,18.91 32.0,18.66 33.0,18.24 34.0,17.66 35.0,16.95 36.0,16.11 37.0,15.18 38.0,14.16 39.0,13.10 40.0,12.00 41.0,10.90 42.0,9.84' fill='none' stroke='%23d9b45c' stroke-width='3.6'/%3E%3Cpolyline points='-2.0,9.84 -1.0,10.90 0.0,12.00 1.0,13.10 2.0,14.16 3.0,15.18 4.0,16.11 5.0,16.95 6.0,17.66 7.0,18.24 8.0,18.66 9.0,18.91 10.0,19.00 11.0,18.91 12.0,18.66 13.0,18.24 14.0,17.66 15.0,16.95 16.0,16.11 17.0,15.18 18.0,14.16 19.0,13.10 20.0,12.00 21.0,10.90 22.0,9.84 23.0,8.82 24.0,7.89 25.0,7.05 26.0,6.34 27.0,5.76 28.0,5.34 29.0,5.09 30.0,5.00 31.0,5.09 32.0,5.34 33.0,5.76 34.0,6.34 35.0,7.05 36.0,7.89 37.0,8.82 38.0,9.84 39.0,10.90 40.0,12.00 41.0,13.10 42.0,14.16' fill='none' stroke='%230c1712' stroke-width='6.4'/%3E%3Cpolyline points='-2.0,9.84 -1.0,10.90 0.0,12.00 1.0,13.10 2.0,14.16 3.0,15.18 4.0,16.11 5.0,16.95 6.0,17.66 7.0,18.24 8.0,18.66 9.0,18.91 10.0,19.00 11.0,18.91 12.0,18.66 13.0,18.24 14.0,17.66 15.0,16.95 16.0,16.11 17.0,15.18 18.0,14.16 19.0,13.10 20.0,12.00 21.0,10.90 22.0,9.84 23.0,8.82 24.0,7.89 25.0,7.05 26.0,6.34 27.0,5.76 28.0,5.34 29.0,5.09 30.0,5.00 31.0,5.09 32.0,5.34 33.0,5.76 34.0,6.34 35.0,7.05 36.0,7.89 37.0,8.82 38.0,9.84 39.0,10.90 40.0,12.00 41.0,13.10 42.0,14.16' fill='none' stroke='%23d9b45c' stroke-width='3.6'/%3E%3Cpolyline points='-7.0,18.24 -6.0,17.66 -5.0,16.95 -4.0,16.11 -3.0,15.18 -2.0,14.16 -1.0,13.10 0.0,12.00 1.0,10.90 2.0,9.84 3.0,8.82 4.0,7.89 5.0,7.05 6.0,6.34 7.0,5.76' fill='none' stroke='%230c1712' stroke-width='6.4'/%3E%3Cpolyline points='-7.0,18.24 -6.0,17.66 -5.0,16.95 -4.0,16.11 -3.0,15.18 -2.0,14.16 -1.0,13.10 0.0,12.00 1.0,10.90 2.0,9.84 3.0,8.82 4.0,7.89 5.0,7.05 6.0,6.34 7.0,5.76' fill='none' stroke='%23d9b45c' stroke-width='3.6'/%3E%3Cpolyline points='33.0,18.24 34.0,17.66 35.0,16.95 36.0,16.11 37.0,15.18 38.0,14.16 39.0,13.10 40.0,12.00 41.0,10.90 42.0,9.84 43.0,8.82 44.0,7.89 45.0,7.05 46.0,6.34 47.0,5.76' fill='none' stroke='%230c1712' stroke-width='6.4'/%3E%3Cpolyline points='33.0,18.24 34.0,17.66 35.0,16.95 36.0,16.11 37.0,15.18 38.0,14.16 39.0,13.10 40.0,12.00 41.0,10.90 42.0,9.84 43.0,8.82 44.0,7.89 45.0,7.05 46.0,6.34 47.0,5.76' fill='none' stroke='%23d9b45c' stroke-width='3.6'/%3E%3C/svg%3E");--tri:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-20 -20 40 40'%3E%3Cpolyline points='0.00,0.00 -1.41,-0.24 -2.75,-0.71 -3.96,-1.39 -5.03,-2.25 -5.93,-3.26 -6.63,-4.39 -7.12,-5.61 -7.40,-6.86 -7.46,-8.13 -7.31,-9.37 -6.96,-10.54 -6.42,-11.62 -5.73,-12.58 -4.89,-13.39 -3.95,-14.04 -2.93,-14.51 -1.87,-14.80 -0.80,-14.90 0.26,-14.82 1.27,-14.57 2.20,-14.16 3.03,-13.60 3.74,-12.93 4.31,-12.17 4.74,-11.34 5.01,-10.46 5.13,-9.58 5.10,-8.71 4.92,-7.87 4.61,-7.10 4.19,-6.41 3.66,-5.82 3.06,-5.34 2.41,-4.98 1.72,-4.74 1.02,-4.63 0.33,-4.64 -0.32,-4.76 -0.93,-4.99 -1.46,-5.31 -1.92,-5.71 -2.29,-6.16 -2.57,-6.65 -2.75,-7.16 -2.83,-7.68 -2.82,-8.18 -2.72,-8.66 -2.55,-9.09 -2.32,-9.46 -2.04,-9.78 -1.71,-10.02 -1.37,-10.19 -1.02,-10.29 -0.68,-10.32 -0.36,-10.29 -0.07,-10.20 0.18,-10.06 0.39,-9.89 0.54,-9.70 0.65,-9.49' fill='none' stroke='%23000' stroke-width='2.7' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpolyline points='-0.00,0.00 0.92,-1.10 1.99,-2.02 3.19,-2.74 4.47,-3.23 5.79,-3.50 7.12,-3.54 8.42,-3.36 9.64,-2.98 10.77,-2.40 11.77,-1.65 12.61,-0.76 13.28,0.25 13.76,1.33 14.05,2.46 14.14,3.60 14.03,4.71 13.75,5.78 13.30,6.76 12.70,7.64 11.98,8.38 11.16,8.98 10.27,9.43 9.33,9.71 8.38,9.82 7.45,9.77 6.56,9.58 5.73,9.23 4.99,8.77 4.36,8.20 3.84,7.55 3.46,6.83 3.21,6.08 3.09,5.32 3.11,4.57 3.25,3.86 3.50,3.20 3.85,2.61 4.29,2.10 4.79,1.69 5.33,1.39 5.90,1.19 6.48,1.09 7.04,1.10 7.58,1.20 8.07,1.39 8.50,1.65 8.86,1.97 9.15,2.33 9.35,2.72 9.48,3.12 9.53,3.52 9.51,3.91 9.42,4.26 9.28,4.57 9.09,4.83 8.87,5.04 8.62,5.19 8.37,5.28 8.13,5.32 7.90,5.30' fill='none' stroke='%23000' stroke-width='2.7' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpolyline points='-0.00,-0.00 0.50,1.35 0.75,2.74 0.78,4.13 0.57,5.48 0.14,6.76 -0.49,7.94 -1.29,8.97 -2.25,9.84 -3.31,10.53 -4.46,11.01 -5.65,11.30 -6.85,11.38 -8.03,11.25 -9.15,10.93 -10.18,10.44 -11.10,9.80 -11.88,9.02 -12.51,8.14 -12.96,7.18 -13.25,6.19 -13.36,5.17 -13.30,4.18 -13.07,3.23 -12.70,2.35 -12.19,1.56 -11.57,0.89 -10.86,0.34 -10.09,-0.06 -9.28,-0.33 -8.46,-0.44 -7.65,-0.42 -6.87,-0.26 -6.15,0.02 -5.51,0.40 -4.96,0.88 -4.52,1.43 -4.18,2.03 -3.96,2.66 -3.86,3.30 -3.87,3.92 -3.98,4.52 -4.19,5.06 -4.47,5.55 -4.83,5.96 -5.24,6.29 -5.68,6.53 -6.14,6.69 -6.59,6.76 -7.04,6.74 -7.45,6.65 -7.82,6.49 -8.14,6.28 -8.40,6.03 -8.60,5.75 -8.73,5.45 -8.80,5.16 -8.81,4.87 -8.76,4.61 -8.67,4.38 -8.54,4.19' fill='none' stroke='%23000' stroke-width='2.7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")}
+body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(85% 55% at 12% -5%,rgba(120,160,135,.20),transparent 70%),radial-gradient(70% 50% at 100% 105%,rgba(150,140,90,.13),transparent 70%),linear-gradient(#16271f,#0e1a15)}
+.btn{border-radius:3px;background:linear-gradient(#25402f,#1c3127)}
+.btn.main{background:linear-gradient(#e6c673,#c9a44c)}
+.btn.main:hover:not(:disabled){filter:brightness(1.07)}
+input,select{border-radius:3px;background:#101d18}
+.logo span{display:block;font-family:"Uncial Antiqua",var(--disp);font-weight:400;font-size:clamp(52px,9vw,86px);line-height:1.1}
+.logo small{display:block;font-size:clamp(20px,3vw,28px);letter-spacing:.42em;color:var(--paper);margin-top:2px}
+.title h1::after{content:"";display:block;height:24px;margin-top:8px;background:var(--knot) repeat-x left center}
+.box h3,.rules h3{display:flex;align-items:center;gap:7px}
+.box h3::before,.rules h3::before{content:"";flex:none;width:17px;height:17px;background:var(--brass);-webkit-mask:var(--tri) center/contain no-repeat;mask:var(--tri) center/contain no-repeat}
+.rules h2::after{content:"";display:block;height:24px;margin-top:6px;background:var(--knot) repeat-x left center}
+.over>div{border-radius:4px;box-shadow:0 0 0 4px var(--sea2),0 0 0 5px var(--brass2),0 18px 50px rgba(0,0,0,.55)}
+.over>div::before{content:"";display:block;height:24px;background:var(--knot) repeat-x center}
+.offer,.track,.res,.dice b{border-radius:3px}
+.pl.cur{box-shadow:inset 2px 0 0 var(--brass)}
 /* Grok Botで作った絵 */
 .res[class*=" a-"]{color:#fff;text-shadow:0 1px 3px #000,0 0 6px #000;min-height:66px;display:flex;flex-direction:column;justify-content:flex-end;border:1px solid rgba(0,0,0,.5);overflow:hidden}
 .btn.ctr{min-width:104px;min-height:104px;color:#fff;text-shadow:0 1px 3px #000,0 0 6px #000;display:flex;flex-direction:column;justify-content:flex-end}.btn.ctr small{color:#fff}
@@ -120,12 +137,13 @@ const RN={wood:'木材',stone:'石材',iron:'鉄',coal:'石炭',cotton:'綿',foo
 const RG={wood:'木',stone:'石',iron:'鉄',coal:'炭',cotton:'綿',food:'食',copper:'銅',salt:'塩',waste:'荒'};
 const COST={dirt:{wood:1},rail:{stone:1,iron:1},upg:{coal:1},take:{stone:1,iron:1,money:2},hut:{food:1,salt:1},seize:{food:2,salt:2},st:{stone:1,iron:1,cotton:2,copper:1,money:2},fac:{iron:2,coal:1,copper:2,salt:2,food:1,money:4},card:{cotton:1,food:1,money:2},deed:{money:12}};
 const LIMIT={line:24,hut:6,st:4,fac:3,deed:2,boost:2,ord:3},YIELD={h:1,s:2,o:3};
-const AP=3,ORDER_PAY=5,ZORO=3,ZORO3=8,MINI_GAP=10,OFFERS=6,TRIP=4,KING=2,KING_MIN=3,LV=['優しい','普通','難しい','鬼','悪魔'];
+const AP=3,ORDER_PAY=5,ZORO=3,ZORO3=8,MINI_GAP=10,OFFERS=6,TRIP=4,KING=2,KING_MIN=3,ROAD=3,ROAD_MIN=6,SURV=2,SURV_MIN=3,LOOT_MAX=4,LV=['優しい','普通','難しい','鬼','悪魔'];
 const itemCost=p=>p.boost.length?24:16;
-const CARD={survey:{n:'測量隊',d:'通行止めを好きなマスへ動かし、そばの相手から物資を1つもらう',c:8},
+const CARD={survey:{n:'測量隊',d:'通行止めを好きなマスへ動かし、そばの相手から物資を1つもらう',c:12},
   forecast:{n:'天気読み',d:'振る前に使い、番号のサイコロ1個と物資のサイコロ1個の目を選ぶ。残りは普通に振る',c:4},
   import:{n:'緊急輸入',d:'好きな物資を2つもらう',c:3},
   bond:{n:'鉄道債',d:'線路を2本、行動を使わずただで敷く',c:2},
+  raid:{n:'強奪令',d:'相手の小屋を1軒、ただで奪う。道がつながっていなくても奪え、行動も使わない。略奪点も入る',c:1},
   secret:{n:'隠し資産',d:'持っているだけで1点。最後まで相手には見えない',c:3}};
 const mod=(a,b)=>((a%b)+b)%b;
 /* マスの中でいちばん広い場所（文字を置く位置）を探す */
@@ -204,7 +222,7 @@ function newGame(cfg){
   const {faces,nums}=makeFaces(B),order=[];for(let i=0;i<n;i++)order.push(i);for(let i=n-1;i>=0;i--)order.push(i);
   const mk={};RES.forEach(r=>{mk[r]=3});
   const slots=shuffle([...RES,...shuffle(RES.slice()).slice(0,2)]),shop=[0,1,2,3,4].map(k=>[...new Set([slots[2*k],slots[2*k+1]])]),orders=[0,1,2,3,4].map(newOrder);
-  return{seq:0,n,map,target:cfg.target||10,faces,nums,shop,orders,ap:AP,lv:cfg.lv??1,king:null,dC:null,dD:null,dE:null,ek:new Array(B.edges.length).fill(0),block:null,nodes:new Array(B.nodes.length).fill(null),edges:new Array(B.edges.length).fill(null),
+  return{seq:0,n,map,target:cfg.target||20,faces,nums,shop,orders,ap:AP,lv:cfg.lv??1,king:null,road:null,surv:null,dC:null,dD:null,dE:null,ek:new Array(B.edges.length).fill(0),block:null,nodes:new Array(B.nodes.length).fill(null),edges:new Array(B.edges.length).fill(null),
     mk,dA:null,dB:null,cur:order[0],phase:'setup',order,oi:0,step:'hut',lastHut:null,tick:0,turn:1,played:false,offers:0,bridge:0,mops:0,back:null,offer:null,deck,winner:null,log:['地図が広げられました。駅を置く場所を選びましょう'],
     pl:seats.map(s=>({name:s.name,uid:s.uid||null,cpu:!!s.cpu,me:!!s.me,mg:null,deeds:0,boost:[],ord:0,mini:1,hand:{wood:0,stone:0,iron:0,coal:0,cotton:0,food:0,copper:0,salt:0,money:4},cards:[]}))}}
 const count=(G,o,k)=>G.nodes.filter(x=>x&&x.o===o&&x.k===k).length;
@@ -214,7 +232,13 @@ const canPay=(p,c)=>KEYS.every(r=>p.hand[r]>=(c[r]||0));
 const pay=(p,c)=>KEYS.forEach(r=>{p.hand[r]-=(c[r]||0)});
 const gain=(p,c)=>KEYS.forEach(r=>{p.hand[r]+=(c[r]||0)});
 const secretN=(G,o)=>G.pl[o].cards.filter(c=>c.k==='secret').length;
-const pubVP=(G,o)=>2*count(G,o,'s')+3*count(G,o,'o')+G.pl[o].deeds+G.pl[o].ord+(G.king===o?KING:0);
+const pubVP=(G,o)=>count(G,o,'h')+2*count(G,o,'s')+3*count(G,o,'o')+G.pl[o].deeds+G.pl[o].ord+(G.pl[o].loot||0)+(G.king===o?KING:0)+(G.road===o?ROAD:0)+(G.surv===o?SURV:0);
+function roadLen(G,o){const B=getB(),mine=[];G.edges.forEach((x,e)=>{if(x===o)mine.push(e)});let top=0;const used=new Set();
+  const walk=(v,n)=>{if(n>top)top=n;if(n&&G.nodes[v]&&G.nodes[v].o!==o)return;for(const e of B.NE[v])if(G.edges[e]===o&&!used.has(e)){used.add(e);const[a,b]=B.edges[e];walk(a===v?b:a,n+1);used.delete(e)}};
+  new Set(mine.flatMap(e=>B.edges[e])).forEach(v=>walk(v,0));return top}
+function roadCheck(G){const L=G.pl.map((_,i)=>roadLen(G,i)),top=Math.max(...L);const w=top<ROAD_MIN?null:G.road!==null&&L[G.road]===top?G.road:L.filter(x=>x===top).length===1?L.indexOf(top):null;
+  if(w!==G.road){G.road=w;log(G,w===null?'大街道の持ち主がいなくなった':`${G.pl[w].name}が大街道を手に入れた（道${top}本、+${ROAD}点）`)}}
+function loot(G,p){if((p.loot||0)>=LOOT_MAX)return;p.loot=(p.loot||0)+1;log(G,`${p.name}に略奪点+1（${p.loot}/${LOOT_MAX}）`)}
 const fullVP=(G,o)=>pubVP(G,o)+secretN(G,o);
 const log=(G,m)=>{G.log.push(m);if(G.log.length>60)G.log.shift()};
 /* 操作が止まったら離席にする時間と、いま操作を待たれている席 */
@@ -234,6 +258,7 @@ const legalUpg=(G,o)=>G.edges.map((x,e)=>x===o&&G.ek[e]===0?e:-1).filter(e=>e>=0
 const legalTake=(G,o)=>{const B=getB();return G.edges.map((x,e)=>x!==null&&x!==o&&G.ek[e]===0&&B.edges[e].some(v=>ownAt(G,o,v))?e:-1).filter(e=>e>=0)};
 const ofKind=(G,o,k)=>{const out=[];G.nodes.forEach((b,n)=>{if(b&&b.o===o&&b.k===k)out.push(n)});return out};
 const legalSt=(G,o)=>ofKind(G,o,'h'),legalFac=(G,o)=>ofKind(G,o,'s');
+const legalRaid=(G,o)=>G.nodes.map((b,n)=>b&&b.o!==o&&b.k==='h'?n:-1).filter(n=>n>=0);
 const legalSeize=(G,o)=>{const B=getB(),out=[];G.nodes.forEach((b,n)=>{if(b&&b.o!==o&&b.k==='h'&&B.NE[n].some(e=>G.edges[e]===o))out.push(n)});return out};
 const townFee=(G,o,k)=>visit(G,o,k)?0:TRIP;
 const visit=(G,o,k)=>getB().towns[k].spots.some(v=>(G.nodes[v]&&G.nodes[v].o===o)||getB().NE[v].some(x=>G.edges[x]===o));
@@ -247,7 +272,7 @@ function produce(G){
 /* 鬼と悪魔だけの特別な力：よい出目を引きやすく、手番の初めに足りない物資を受け取る */
 const cpuLv=(G,p)=>p.cpu?(G.lv??1):0;
 function rollScore(G,o,a,c,b,d,e){const B=getB(),rs=[RES[b-1],RES[d-1],RES[e-1]];let v=a===c?2:0;B.faces.forEach((f,i)=>{if((G.nums[i]!==a&&G.nums[i]!==c)||!rs.includes(G.faces[i])||blocked(G,i))return;f.v.forEach(n=>{const x=G.nodes[n];if(x)v+=(x.o===o?1:G.pl[x.o].cpu?0:-.4)*YIELD[x.k]})});return v}
-function cpuGift(G,p,o){const lv=cpuLv(G,p),n=[0,0,0,1,3][lv];if(!n)return;const g=goalCost(G,o);for(let i=0;i<n;i++){const m=RES.filter(r=>p.hand[r]<(g[r]||0));p.hand[m.length?m[0]:RES[Math.floor(Math.random()*8)]]++}if(lv===4)p.hand.money+=3}
+function cpuGift(G,p,o){const lv=cpuLv(G,p),n=lv===3?+(Math.random()<[0,0,1,.5,.3][G.n]):[0,0,0,0,3][lv];if(!n)return;const g=goalCost(G,o);for(let i=0;i<n;i++){const m=RES.filter(r=>p.hand[r]<(g[r]||0));p.hand[m.length?m[0]:RES[Math.floor(Math.random()*8)]]++}if(lv===4)p.hand.money+=3}
 function doRoll(G,a,c,b,d,e){
   G.dA=a;G.dC=c;G.dB=b;G.dD=d;G.dE=e;log(G,`${G.pl[G.cur].name}のサイコロ：${RN[RES[b-1]]}と${RN[RES[d-1]]}と${RN[RES[e-1]]}、番号${a}と${c}`);
   produce(G);cpuGift(G,G.pl[G.cur],G.cur);
@@ -280,6 +305,7 @@ function apply(G,seat,a){
   if(seat!==G.cur)return'手番ではありません';
   if(G.offer&&t!=='cancel')return'提案の返事を待っています';
   const err=step(G,seat,p,a);if(err)return err;
+  if(G.phase!=='over'&&['setupLine','line','take','seize','hut','st','fac','play'].includes(a.t))roadCheck(G);
   if(G.phase!=='setup'&&G.phase!=='over'){if(fullVP(G,G.cur)>=G.target)finish(G,G.cur);else if(G.turn>300)finish(G,G.pl.map((_,i)=>i).sort((x,y)=>fullVP(G,y)-fullVP(G,x))[0])}
   G.seq++;return null}
 function finish(G,w){G.phase='over';G.winner=w;log(G,`${G.pl[w].name}が${fullVP(G,w)}点で勝ちました`)}
@@ -292,7 +318,7 @@ function step(G,seat,p,a){
     if(G.oi>=G.n){const g={};B.NF[n].forEach(f=>{const r=G.faces[f];if(r!=='waste')g[r]=(g[r]||0)+1});gain(p,g);if(Object.keys(g).length)log(G,`${p.name}は最初の物資（${bagTxt(g)}）を得た`)}
     return null}
   case'setupLine':{if(G.phase!=='setup'||G.step!=='line'||!legalLines(G,seat).includes(e))return'そこには敷けません';G.edges[e]=seat;G.ek[e]=0;nextSetup(G);return null}
-  case'roll':{if(G.phase!=='roll')return'今は振れません';let r=null,v=-1e9;for(let i=0,n=[1,1,1,2,12][cpuLv(G,p)];i<n;i++){const x=[die(),die(),die8(),die8(),die8()],s=rollScore(G,seat,...x);if(s>v){v=s;r=x}}doRoll(G,...r);return null}
+  case'roll':{if(G.phase!=='roll')return'今は振れません';let r=null,v=-1e9;for(let i=0,n=[1,1,1,1,12][cpuLv(G,p)];i<n;i++){const x=[die(),die(),die8(),die8(),die8()],s=rollScore(G,seat,...x);if(s>v){v=s;r=x}}doRoll(G,...r);return null}
   case'block':{if(G.phase!=='block'||!Number.isInteger(a.f)||a.f<0||a.f>=B.faces.length||a.f===G.block||G.faces[a.f]==='waste')return'そこには動かせません';doBlock(G,a.f);return null}
   case'line':{if(!main)return'今は敷けません';if(lines(G,seat)>=LIMIT.line)return'道を使い切りました';
     if(!legalLines(G,seat).includes(e))return'そこには敷けません';
@@ -302,11 +328,11 @@ function step(G,seat,p,a){
   case'upg':{if(!main)return'今はできません';if(G.ap<1)return noAp;if(!legalUpg(G,seat).includes(e))return'強化できません';if(!canPay(p,COST.upg))return'足りません';
     pay(p,COST.upg);G.ap--;G.ek[e]=1;log(G,`${p.name}が土の道を線路にした`);return null}
   case'take':{if(!main)return'今はできません';if(G.ap<1)return noAp;if(lines(G,seat)>=LIMIT.line)return'道を使い切りました';if(!legalTake(G,seat).includes(e))return'その道は乗っ取れません';if(!canPay(p,COST.take))return'足りません';
-    const v=G.edges[e];pay(p,COST.take);G.ap--;G.edges[e]=seat;G.ek[e]=1;log(G,`${p.name}が${G.pl[v].name}の土の道を乗っ取った`);return null}
+    const v=G.edges[e];pay(p,COST.take);G.ap--;G.edges[e]=seat;G.ek[e]=1;log(G,`${p.name}が${G.pl[v].name}の土の道を乗っ取った`);loot(G,p);return null}
   case'hut':{if(!main)return'今は建てられません';if(G.ap<1)return noAp;if(count(G,seat,'h')>=LIMIT.hut)return'小屋を使い切りました';if(!legalHuts(G,seat).includes(n))return'そこには建てられません';
     if(!canPay(p,COST.hut))return'足りません';pay(p,COST.hut);G.ap--;G.nodes[n]={o:seat,k:'h'};log(G,`${p.name}が小屋を建てた`);return null}
   case'seize':{if(!main)return'今はできません';if(G.ap<1)return noAp;if(count(G,seat,'h')>=LIMIT.hut)return'小屋を使い切りました';if(!legalSeize(G,seat).includes(n))return'その小屋は奪えません';if(!canPay(p,COST.seize))return'足りません';
-    const v=G.nodes[n].o;pay(p,COST.seize);G.ap--;G.nodes[n].o=seat;log(G,`${p.name}が${G.pl[v].name}の小屋を奪った`);return null}
+    const v=G.nodes[n].o;pay(p,COST.seize);G.ap--;G.nodes[n].o=seat;log(G,`${p.name}が${G.pl[v].name}の小屋を奪った`);loot(G,p);return null}
   case'st':{if(!main)return'今は建てられません';if(G.ap<1)return noAp;if(count(G,seat,'s')>=LIMIT.st)return'駅を使い切りました';if(!legalSt(G,seat).includes(n))return'そこには建てられません';
     if(!canPay(p,COST.st))return'足りません';pay(p,COST.st);G.ap--;G.nodes[n].k='s';log(G,`${p.name}が小屋を駅にした`);return null}
   case'fac':{if(!main)return'今は建てられません';if(G.ap<1)return noAp;if(count(G,seat,'o')>=LIMIT.fac)return'工場を使い切りました';if(!legalFac(G,seat).includes(n))return'そこには建てられません';
@@ -330,11 +356,13 @@ function step(G,seat,p,a){
     if(a.k==='forecast'){if(G.phase!=='roll')return'天気読みは振る前に使います';if(!Number.isInteger(a.d)||a.d<1||a.d>6)return'番号を選んでください';if(!RES.includes(a.r))return'物資を選んでください'}
     if(a.k==='import'&&(!Array.isArray(a.r)||a.r.length!==2||!a.r.every(r=>RES.includes(r))))return'物資を選んでください';
     if(a.k==='bond'&&(!main||lines(G,seat)>=LIMIT.line))return'今は使えません';
+    if(a.k==='raid'&&(!main||count(G,seat,'h')>=LIMIT.hut||!legalRaid(G,seat).includes(a.n)))return'その小屋は奪えません';
     p.cards.splice(i,1);G.played=true;log(G,`${p.name}が「${CARD[a.k].n}」を使った`);
-    if(a.k==='survey'){G.back=G.phase;G.phase='block'}
+    if(a.k==='survey'){G.back=G.phase;G.phase='block';p.sv=(p.sv||0)+1;if(p.sv>=SURV_MIN&&G.surv!==seat&&(G.surv===null||p.sv>(G.pl[G.surv].sv||0))){G.surv=seat;log(G,`${p.name}が測量長になった（+${SURV}点）`)}}
     else if(a.k==='forecast')doRoll(G,a.d,die(),RES.indexOf(a.r)+1,die8(),die8());
     else if(a.k==='import')a.r.forEach(r=>p.hand[r]++);
     else if(a.k==='bond')G.bridge=Math.min(2,LIMIT.line-lines(G,seat));
+    else if(a.k==='raid'){const v=G.nodes[a.n].o;G.nodes[a.n].o=seat;log(G,`${p.name}が${G.pl[v].name}の小屋を奪った`);loot(G,p)}
     return null}
   case'offer':{if(!main)return'今は提案できません';if(G.offers>=OFFERS)return`提案は1手番に${OFFERS}回までです`;const give=cleanBag(a.give),want=cleanBag(a.want);if(!give||!want)return'渡すものと欲しいものを選んでください';if(!canPay(p,give))return'足りません';
     G.offer={from:seat,give,want,no:[]};G.offers++;log(G,`${p.name}の提案：${bagTxt(give)}を渡すので${bagTxt(want)}が欲しい`);return null}
@@ -426,10 +454,12 @@ function cpuAct(G,seat){
     if(p.hand.money>=itemCost(p)&&p.boost.length<LIMIT.boost){const c=[];G.shop.forEach((s,k)=>{if(visit(G,seat,k))s.forEach(r=>{if(!p.boost.includes(r))c.push({k,r})})});
       if(c.length){const x=best(c,o=>{let v=Math.random();G.nodes.forEach((b,n)=>{if(b&&b.o===seat)B.NF[n].forEach(f=>{if(G.faces[f]===o.r)v+=YIELD[b.k]})});return v});return{t:'item',k:x.k,r:x.r}}}
     if(L&&canPay(p,COST.seize)&&count(G,seat,'h')<LIMIT.hut&&legalSeize(G,seat).length)return{t:'seize',n:best(legalSeize(G,seat),n=>nodeScore(G,n,seat))};
+    if(L>=2&&(p.loot||0)<LOOT_MAX&&canPay(p,COST.take)&&lines(G,seat)<LIMIT.line&&legalTake(G,seat).length)return{t:'take',e:best(legalTake(G,seat),e=>{const o=G.edges[e];return Math.random()+(G.road===o?3:0)+pubVP(G,o)*.1})};
     if(canPay(p,COST.hut)&&hs.length)return{t:'hut',n:best(hs,n=>nodeScore(G,n,seat))};
     if(canPay(p,COST.take)&&p.hand.money>=4&&lines(G,seat)<LIMIT.line&&legalTake(G,seat).length)return{t:'take',e:best(legalTake(G,seat),()=>Math.random())};
     if(ls.length&&(!hs.length||lines(G,seat)<5)){if(canPay(p,COST.rail)&&p.hand.iron>=2&&p.hand.stone>=2)return{t:'line',k:'rail',e:lineChoice(G,seat,ls)};if(canPay(p,COST.dirt))return{t:'line',k:'dirt',e:lineChoice(G,seat,ls)}}
     if(p.hand.coal>=3&&legalUpg(G,seat).length)return{t:'upg',e:legalUpg(G,seat)[0]}}
+  if(!G.played&&usable.some(c=>c.k==='raid')&&count(G,seat,'h')<LIMIT.hut&&legalRaid(G,seat).length)return{t:'play',k:'raid',n:best(legalRaid(G,seat),n=>nodeScore(G,n,seat)+pubVP(G,G.nodes[n].o)*.2)};
   if(!G.played){if(usable.some(c=>c.k==='import')){const g=goalCost(G,seat),m=RES.filter(r=>p.hand[r]<(g[r]||0));return{t:'play',k:'import',r:[m[0]||'iron',m[1]||m[0]||'coal']}}
     if(usable.some(c=>c.k==='bond')&&ls.length)return{t:'play',k:'bond'};
     if(usable.some(c=>c.k==='survey'))return{t:'play',k:'survey'}}
@@ -462,7 +492,7 @@ const $=id=>document.getElementById(id);
   const s=document.createElement('style');s.textContent=k.map(n=>`.a-${n}{background-image:linear-gradient(rgba(0,0,0,0) 35%,rgba(0,0,0,.72)),url(${ART[n]});background-size:cover;background-position:center}`).join('');document.body.appendChild(s)})();
 const artC=k=>ART[k]?` a-${k}`:'';
 let G=null;
-const UI={screen:'title',lv:Math.min(4,Math.max(0,+(ls.get('goka.lv')??1)||0)),name:ls.get('goka.name')||'',code:'',msg:'',size:4,map:1,target:10,mode:null,panel:null,give:{},want:{},card:null,r1:'wood',r2:'iron',toast:''};
+const UI={screen:'title',lv:Math.min(4,Math.max(0,+(ls.get('goka.lv')??1)||0)),name:ls.get('goka.name')||'',code:'',msg:'',size:4,map:1,target:20,mode:null,panel:null,give:{},want:{},card:null,r1:'wood',r2:'iron',toast:''};
 const NET={db:null,room:null,uid:null,pid:null,ready:false,tid:null,t:null,gr:null,unsub:null,peers:[],seen:{},writing:false,pendingW:false,open:[],stats:{},aid:0,local:false,wait:null,nextCpu:0,act:{},mark:0,pinged:0};
 const SRV=!!(window.claude&&window.claude.server);
 const seatOf=()=>{if(NET.local){if(!G)return null;const i=G.pl.findIndex(p=>p.me);return i<0?null:i}if(!G||!NET.pid)return null;const i=G.pl.findIndex(p=>p.uid===NET.pid);return i<0?null:i};
@@ -588,8 +618,13 @@ function startLocal(){
   NET.local=true;G=newGame({seats,target:UI.target,map:UI.map,lv:UI.lv});UI.screen='game';render()}
 
 /* --- 地図 --- */
+function knotRim(st,K){let h='';const S=(p)=>`<polyline points="${p}" fill="none" stroke="${K}" stroke-width="8.5" stroke-linejoin="round"/><polyline points="${p}" fill="none" stroke="var(--brass)" stroke-width="4.6" stroke-linejoin="round"/>`;
+  st.forEach((a,i)=>{const b=st[(i+1)%st.length],dx=b[0]-a[0],dy=b[1]-a[1],L=Math.hypot(dx,dy),n=Math.max(2,Math.round(L/44)),ux=-dy/L,uy=dx/L;
+    const w=(sg,u0,u1)=>{const p=[];for(let j=0;j<=24;j++){const u=u0+(u1-u0)*j/24,o=sg*7*Math.sin(2*Math.PI*n*u);p.push((a[0]+dx*u+ux*o).toFixed(1)+','+(a[1]+dy*u+uy*o).toFixed(1))}return p.join(' ')};
+    const full=sg=>{const p=[];for(let c=0;c<n;c++)p.push(w(sg,c/n,(c+1)/n));return p.join(' ')};
+    h+=S(full(-1))+S(full(1));for(let c=0;c<=n;c++){const m=c/n,d=.17/n;h+=S(w(-1,Math.max(0,m-d),Math.min(1,m+d)))}});return h}
 function boardSvg(g,opt={}){
-  const B=getB(),my=opt.seat,mode=opt.mode,xy=n=>[B.nodes[n].x,B.nodes[n].y],K='#140e20';
+  const B=getB(),my=opt.seat,mode=opt.mode,xy=n=>[B.nodes[n].x,B.nodes[n].y],K='#0f1c16';
   const cellP=f=>'M'+B.faces[f].poly.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join('L')+'Z';
   const eP=e=>{const[a,b]=B.edges[e];return`M${xy(a).map(v=>v.toFixed(1))}L${xy(b).map(v=>v.toFixed(1))}`};
   const rolled=g.dA!==null&&!(UI.roll>Date.now()),hit=i=>rolled&&!blocked(g,i)&&(g.faces[i]===RES[g.dB-1]||g.faces[i]===RES[g.dD-1]||g.faces[i]===RES[g.dE-1])&&(g.nums[i]===g.dA||g.nums[i]===g.dC);let h='';
@@ -600,7 +635,7 @@ function boardSvg(g,opt={}){
     if(t==='waste'){h+=T(y,r*1.1,RG[t]);return}
     if(r>=20)h+=T(y-r*.38,r*.72,RG[t])+T(y+r*.42,r*.92,g.nums[i]);else h+=T(y,r*.82,RG[t]+g.nums[i])});
   B.faces.forEach((f,i)=>{if(hit(i))h+=`<path d="${cellP(i)}" fill="none" stroke="var(--brass)" stroke-width="8" stroke-linejoin="round"/>`});
-  h+=`<path d="M${B.star.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join('L')}Z" fill="none" stroke="var(--brass2)" stroke-width="7" stroke-linejoin="round"/>`;
+  h+=knotRim(B.star,K);
   if(g.block!==null){const f=B.faces[g.block];h+=`<path d="${cellP(g.block)}" fill="${K}" fill-opacity=".64"/><g transform="translate(${f.cx.toFixed(1)} ${f.cy.toFixed(1)})"><path d="M0 -24L24 18H-24Z" fill="var(--warn)" stroke="${K}" stroke-width="4"/><text y="11" text-anchor="middle" font-size="26" font-weight="800" fill="${K}">!</text></g>`}
   B.nodes.forEach((p,n)=>{if(p.way)h+=`<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="4" fill="var(--paper)" stroke="${K}" stroke-width="2"/>`;else if(!B.dead[n]&&!g.nodes[n])h+=`<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="4.5" fill="${K}" fill-opacity=".55"/>`});
   g.edges.forEach((o,e)=>{if(o===null)return;h+=g.ek[e]?`<path d="${eP(e)}" stroke="${K}" stroke-width="14" stroke-linecap="round"/><path d="${eP(e)}" stroke="${PC[o]}" stroke-width="9" stroke-linecap="round"/>`
@@ -609,8 +644,8 @@ function boardSvg(g,opt={}){
     h+=b.k==='h'?`<path transform="${at} scale(.58)" d="M-20 20V-4L0 -24L20 -4V20Z" fill="${PC[b.o]}" stroke="${K}" stroke-width="6"/>`
       :b.k==='s'?`<path transform="${at} scale(.9)" d="M-24 20V-6L0 -26L24 -6V20ZM-8 20V4H8V20Z" fill-rule="evenodd" fill="${PC[b.o]}" stroke="${K}" stroke-width="5"/>`
       :`<path transform="${at} scale(.92)" d="M-28 24V-8L-12 4V-8L4 4V-32H20V24Z" fill="${PC[b.o]}" stroke="${K}" stroke-width="5"/>`});
-  B.towns.forEach((w,k)=>{const on=my!==undefined&&my!==null&&visit(g,my,k);h+=`<circle cx="${w.x.toFixed(1)}" cy="${w.y.toFixed(1)}" r="32" fill="${on?'var(--brass)':'var(--sea2)'}" stroke="var(--brass)" stroke-width="4"/><text x="${w.x.toFixed(1)}" y="${w.y.toFixed(1)}" text-anchor="middle" dominant-baseline="central" font-size="30" font-family="var(--disp)" font-weight="800" fill="${on?K:'var(--paper)'}">商</text>`});
-  if(['hut','setupHut','seize','st','fac'].includes(mode)){const ns={hut:legalHuts,setupHut:setupHuts,seize:legalSeize,st:legalSt,fac:legalFac}[mode](g,my);
+  B.towns.forEach((w,k)=>{const on=my!==undefined&&my!==null&&visit(g,my,k);h+=`<circle cx="${w.x.toFixed(1)}" cy="${w.y.toFixed(1)}" r="32" fill="${on?'var(--brass)':'var(--sea2)'}" stroke="var(--brass)" stroke-width="4"/><circle cx="${w.x.toFixed(1)}" cy="${w.y.toFixed(1)}" r="26" fill="none" stroke="${on?K:'var(--brass2)'}" stroke-width="1.5"/><text x="${w.x.toFixed(1)}" y="${w.y.toFixed(1)}" text-anchor="middle" dominant-baseline="central" font-size="30" font-family="var(--disp)" font-weight="800" fill="${on?K:'var(--paper)'}">商</text>`});
+  if(['hut','setupHut','seize','raid','st','fac'].includes(mode)){const ns={hut:legalHuts,setupHut:setupHuts,seize:legalSeize,raid:legalRaid,st:legalSt,fac:legalFac}[mode](g,my);
     ns.forEach(n=>{const[x,y]=xy(n).map(v=>v.toFixed(1));h+=`<circle class="pulse" cx="${x}" cy="${y}" r="13" fill="var(--paper)" stroke="${K}" stroke-width="3"/><circle data-n="${n}" cx="${x}" cy="${y}" r="30" fill="transparent" style="cursor:pointer"/>`})}
   if(['dirt','rail','setupLine','upg','take'].includes(mode)){(mode==='upg'?legalUpg:mode==='take'?legalTake:legalLines)(g,my).forEach(e=>{h+=`<path class="pulse" d="${eP(e)}" stroke="var(--paper)" stroke-width="8" stroke-dasharray="11 9"/><path data-e="${e}" d="${eP(e)}" stroke="transparent" stroke-width="30" style="cursor:pointer"/>`})}
   if(mode==='block'){B.faces.forEach((f,i)=>{if(i!==g.block&&!f.waste)h+=`<path data-f="${i}" d="${cellP(i)}" fill="var(--paper)" fill-opacity=".12" stroke="var(--paper)" stroke-width="2" style="cursor:pointer"/>`})}
@@ -634,15 +669,15 @@ const sel=(id,label,opts,v)=>`<label class="grow" for="${id}">${label}<select id
 function titleView(){
   const on=NET.db&&NET.room&&NET.uid;
   return`<div class="title"><div>
-    <h1>五角の商会</h1>
+    <h1 class="logo"><span lang="sv">Tänk!</span><small>テンク</small></h1>
     <p class="lead">正五角形の大陸に道を延ばす商会の勝負です。小屋から駅、工場へ育て、町商人から増産権を買い、相手の土の道や小屋を奪い合います。先に目標の点数へ届いた人が勝ちです。</p>
     <div class="stack">
       <label for="nm">名前<input id="nm" maxlength="10" value="${esc(UI.name)}" placeholder="10文字まで"></label>
       <div class="row">
                 ${sel('sz','人数',[[2,'2人'],[3,'3人'],[4,'4人']],UI.size)}
-        ${sel('tg','勝利点',[[8,'8点'],[10,'10点'],[12,'12点']],UI.target)}
+        ${sel('tg','勝利点',[[16,'16点'],[20,'20点'],[24,'24点']],UI.target)}
       </div>
-      <div><span class="sub">ソロのCPUの強さ</span><div class="row">${LV.map((n,i)=>`<button class="btn grow ${UI.lv===i?'on':''}" data-a="lv" data-v="${i}">${n}</button>`).join('')}</div>${UI.lv>=3?`<p class="sub">${UI.lv===3?'鬼はよい出目を引きやすく、毎手番に物資を1つ受け取ります':'悪魔はほぼ狙った目を出し、毎手番に物資3つとお金3を受け取ります。勝たせる気はありません'}</p>`:''}</div>
+      <div><span class="sub">ソロのCPUの強さ</span><div class="row">${LV.map((n,i)=>`<button class="btn grow ${UI.lv===i?'on':''}" data-a="lv" data-v="${i}">${n}</button>`).join('')}</div>${UI.lv>=3?`<p class="sub">${UI.lv===3?'鬼はときどき物資を受け取り、人の小屋を狙って通行止めを置きます':'悪魔はほぼ狙った目を出し、毎手番に物資3つとお金3を受け取ります。勝たせる気はありません'}</p>`:''}</div>
       <div class="row">
         <button class="btn main grow" data-a="create" ${on?'':'disabled'}>部屋を作る</button>
         <button class="btn grow" data-a="local">CPUと遊ぶ</button>
@@ -699,7 +734,7 @@ function gameView(){
       ${b('rail','線路',COST.rail,canPay(p,COST.rail)&&road&&legalLines(g,me).length)}
       ${b('upg','線路へ強化',COST.upg,canPay(p,COST.upg)&&legalUpg(g,me).length)}
       ${b('take','道を乗っ取る',COST.take,canPay(p,COST.take)&&road&&legalTake(g,me).length)}
-      ${b('hut','小屋 0点',COST.hut,canPay(p,COST.hut)&&count(g,me,'h')<LIMIT.hut&&legalHuts(g,me).length)}
+      ${b('hut','小屋 1点',COST.hut,canPay(p,COST.hut)&&count(g,me,'h')<LIMIT.hut&&legalHuts(g,me).length)}
       ${b('seize','小屋を奪う',COST.seize,canPay(p,COST.seize)&&count(g,me,'h')<LIMIT.hut&&legalSeize(g,me).length)}
       ${b('st','駅 2点',COST.st,canPay(p,COST.st)&&count(g,me,'s')<LIMIT.st&&legalSt(g,me).length)}
       ${b('fac','工場 3点',COST.fac,canPay(p,COST.fac)&&count(g,me,'o')<LIMIT.fac&&legalFac(g,me).length)}
@@ -720,10 +755,10 @@ function gameView(){
     h+=`<div class="box"><h3>相手と取引</h3><div class="step"><span></span><span class="sub">渡す</span><span class="sub">欲しい</span></div>${KEYS.map(r=>`<div class="step"><span>${RN[r]}</span>${pm('give',r)}${pm('want',r)}</div>`).join('')}${UI.panel==='trade'?`<button class="btn main" data-a="offer">全員に提案する（残り${OFFERS-g.offers}回）</button>`:''}<button class="btn" data-a="post">掲示板に出す</button></div>`}
   if(g.phase!=='setup'){const can=mine&&g.phase==='main'&&!g.offer;
     h+=`<div class="box"><h3>取引掲示板</h3><p class="sub">手番でなくても掲示できます。手番の人が受けると成立します。手番ごとの最初の取引は、両者にお金1が入ります。</p>${g.pl.map((q,i)=>q.post?`<div class="trow"><span>${esc(q.name)}：${esc(bagTxt(q.post.give))}を渡す ⇄ ${esc(bagTxt(q.post.want))}が欲しい</span>${i===me?'<button class="btn" data-a="unpost">取り下げ</button>':`<button class="btn" data-a="accept" data-s="${i}" ${can&&canPay(q,q.post.give)&&canPay(p,q.post.want)?'':'disabled'}>受ける</button>`}</div>`:'').join('')||'<p class="sub">掲示はありません</p>'}${p?`<button class="btn ${UI.panel==='post'?'on':''}" data-a="panel" data-p="post">掲示を作る</button>`:''}</div>`}
-  if(p&&p.cards.length){const use=c=>mine&&!g.played&&c.t<g.tick&&c.k!=='secret'&&(g.phase==='main'||g.phase==='roll')&&!g.offer&&!(c.k==='forecast'&&g.phase!=='roll')&&!(c.k==='bond'&&g.phase!=='main');
+  if(p&&p.cards.length){const use=c=>mine&&!g.played&&c.t<g.tick&&c.k!=='secret'&&(g.phase==='main'||g.phase==='roll')&&!g.offer&&!(c.k==='forecast'&&g.phase!=='roll')&&!((c.k==='bond'||c.k==='raid')&&g.phase!=='main');
     h+=`<div class="box"><h3>契約書</h3><div class="cardrow">${p.cards.map(c=>`<button class="btn ${UI.card===c.k?'on':''}${ART[c.k]?' ctr'+artC(c.k):''}" data-a="card" data-k="${c.k}" ${use(c)?'':'disabled'} title="${esc(CARD[c.k].d)}">${CARD[c.k].n}<small>${c.k==='secret'?'+1点':c.t>=g.tick?'次の手番から':''}</small></button>`).join('')}</div>`;
     if(UI.card&&mine)h+=cardPanel();h+=`</div>`}
-  h+=`<div class="box"><h3>商会（${g.target}点で勝ち${NET.local?`・CPU ${LV[g.lv??1]}`:''}）</h3><div class="players">${g.pl.map((q,i)=>`<div class="pl ${i===g.cur?'cur':''}"><i style="background:${PC[i]}"></i><div style="min-width:0"><div class="nm">${esc(q.name)}${i===me&&q.name!=='あなた'?'（あなた）':''}${isAway(q)||q.afk?' 離席':''}${g.king===i?' 取引王':''}</div><div class="st">物資${handN(q)}　金${q.hand.money}　契約${q.cards.length}　道${lines(g,i)}/${LIMIT.line}${q.boost.length?'　増産'+q.boost.map(r=>RG[r]).join(''):''}</div></div><span class="vp">${i===me?fullVP(g,i):pubVP(g,i)}</span></div>`).join('')}</div></div>`;
+  h+=`<div class="box"><h3>商会（${g.target}点で勝ち${NET.local?`・CPU ${LV[g.lv??1]}`:''}）</h3><div class="players">${g.pl.map((q,i)=>`<div class="pl ${i===g.cur?'cur':''}"><i style="background:${PC[i]}"></i><div style="min-width:0"><div class="nm">${esc(q.name)}${i===me&&q.name!=='あなた'?'（あなた）':''}${isAway(q)||q.afk?' 離席':''}${g.king===i?' 取引王':''}${g.road===i?' 大街道':''}${g.surv===i?' 測量長':''}</div><div class="st">物資${handN(q)}　金${q.hand.money}　契約${q.cards.length}　道${lines(g,i)}/${LIMIT.line}　最長${roadLen(g,i)}${q.sv?'　測量'+q.sv:''}${q.loot?'　略奪'+q.loot:''}${q.boost.length?'　増産'+q.boost.map(r=>RG[r]).join(''):''}</div></div><span class="vp">${i===me?fullVP(g,i):pubVP(g,i)}</span></div>`).join('')}</div></div>`;
   h+=`<div class="box"><h3>記録</h3><div class="log" aria-live="polite">${g.log.slice().reverse().slice(0,30).map(m=>`<p>${esc(m)}</p>`).join('')}</div></div>`;
   h+=`<div class="row"><button class="btn" data-a="rules">遊び方</button>${NET.local?'<button class="btn" data-a="leave">やめる</button>':me!==null?'<button class="btn" data-a="quit">席を立つ（CPUに任せる）</button>':'<button class="btn" data-a="leave">観戦をやめる</button>'}</div></div></div>`;
   if(g.phase==='over'){const rank=g.pl.map((q,i)=>({q,i,v:fullVP(g,i)})).sort((a,b)=>b.v-a.v);
@@ -732,18 +767,20 @@ function gameView(){
 function cardPanel(){const k=UI.card,opt=v=>RES.map(r=>`<option value="${r}" ${v===r?'selected':''}>${RN[r]}</option>`).join('');
   if(k==='forecast')return`<p class="sub">${CARD.forecast.d}</p><p class="sub">番号</p><div class="cardrow">${[1,2,3,4,5,6].map(d=>`<button class="btn ${UI.fd===d?'on':''}" data-a="fd" data-d="${d}">${d}</button>`).join('')}</div><p class="sub">物資</p><div class="cardrow">${RES.map(r=>`<button class="btn ${UI.fr===r?'on':''}" data-a="fr" data-r="${r}">${RN[r]}</button>`).join('')}</div><button class="btn main" data-a="forecast" ${UI.fd&&UI.fr?'':'disabled'}>この目で振る</button>`;
   if(k==='import')return`<p class="sub">${CARD.import.d}</p><div class="row"><label class="grow" for="m1">1つ目<select id="m1">${opt(UI.r1)}</select></label><label class="grow" for="m2">2つ目<select id="m2">${opt(UI.r2)}</select></label><button class="btn main" data-a="import">もらう</button></div>`;
+  if(k==='raid'){const me=seatOf(),ok=count(G,me,'h')<LIMIT.hut&&legalRaid(G,me).length;return`<p class="sub">${CARD.raid.d}</p><button class="btn main" data-a="raidgo" ${ok?'':'disabled'}>${UI.mode==='raid'?'地図の光る小屋を選んでください':'奪う小屋を選ぶ'}</button>`}
   return`<p class="sub">${CARD[k].d}</p><button class="btn main" data-a="usecard">使う</button>`}
 function rulesView(){return`<div class="rules"><h2>遊び方</h2>
-  <p>正五角形の大陸で、先に勝利点（ふつうは10点）を集めた商会の勝ちです。</p>
+  <p>正五角形の大陸で、先に勝利点（ふつうは20点）を集めた商会の勝ちです。</p>
   <h3>盤面</h3><ul><li>物資は8種類です。回収できない荒地は中央の1マスだけで、荒地に触れる点には建てられません</li><li>建てられる点は、どこもちょうど3マスの物資に触れています</li><li>外周も道を通せます。外周の白い点は通過するだけで、建物は置けません</li><li>5つの角に町商人がいます</li></ul>
   <h3>はじめ</h3><ul><li>手番の順番は、対局を始めるときに毎回ランダムで決まります</li><li>順番に小屋と土の道を1組ずつ置きます。2周目は逆の順番です</li><li>2つ目の小屋に触れる3マスから最初の物資をもらいます。お金は全員4から始まります</li></ul>
   <h3>手番</h3><ul><li>サイコロを5個振ります。物資のサイコロ3個（8面）と番号のサイコロ2個（6面）です</li><li>出た物資のどれかで、出た番号のどちらかのマスに触れる建物が物資を生みます。小屋は1個、駅は2個、工場は3個です</li><li>手番の人が何ももらえなかったときは、補助金としてお金を1もらいます</li><li>行動は1手番に${AP}回までです。道、建物、町商人が行動を使います。市場、取引、契約書、権利書、ミニゲームは行動を使いません</li></ul>
   <h3>ゾロ目</h3><ul><li>番号の2個が同じなら、振った本人だけがお金を${ZORO}もらいます。物資も2個以上そろえば${ZORO3}もらえます</li><li>振った人は通行止めを動かせます。止めたマスは物資が出なくなり、そばの相手から物資を1つもらえます</li><li>番号がゾロ目のとき、物資を14個以上持つ人は半分を失います</li></ul>
   <h3>建物</h3><div class="tbl"><table><tr><th>建物</th><th>費用</th><th>点</th><th>生産</th></tr>
-    <tr><td>小屋</td><td>食料・塩</td><td>0点</td><td>1個</td></tr><tr><td>駅（小屋から）</td><td>石材・鉄・綿2・銅・お金2</td><td>2点</td><td>2個</td></tr><tr><td>工場（駅から）</td><td>鉄2・石炭・銅2・塩2・食料・お金4</td><td>3点</td><td>3個</td></tr></table></div>
+    <tr><td>小屋</td><td>食料・塩</td><td>1点</td><td>1個</td></tr><tr><td>駅（小屋から）</td><td>石材・鉄・綿2・銅・お金2</td><td>2点</td><td>2個</td></tr><tr><td>工場（駅から）</td><td>鉄2・石炭・銅2・塩2・食料・お金4</td><td>3点</td><td>3個</td></tr></table></div>
   <ul><li>相手の小屋は、自分の道がつながっていれば費用の2倍（食料2・塩2）で奪えます。駅と工場は奪えません</li></ul>
   <h3>道</h3><div class="tbl"><table><tr><th>道</th><th>費用</th><th>特徴</th></tr>
     <tr><td>土の道</td><td>木材</td><td>安いけれど乗っ取られます</td></tr><tr><td>線路</td><td>石材・鉄</td><td>乗っ取られません</td></tr><tr><td>線路へ強化</td><td>石炭</td><td>自分の土の道を線路にします</td></tr><tr><td>乗っ取り</td><td>石材・鉄・お金2</td><td>自分の道につながる相手の土の道を奪い、線路にします</td></tr></table></div>
+  <h3>特別な点</h3><ul><li><b>大街道</b> つながった自分の道が${ROAD_MIN}本以上で最長の人は${ROAD}点もらえます。相手の建物がある点で道は切れます。同じ長さなら今の持ち主のままです</li><li><b>測量長</b> 測量隊を${SURV_MIN}回以上使い、使った回数が最多の人は${SURV}点もらえます</li><li><b>略奪点</b> 相手の小屋を奪う、または土の道を乗っ取るたびに1点もらえます。1人${LOOT_MAX}点までで、一度もらえば消えません</li></ul>
   <h3>町商人</h3><ul><li>角のマスに触れる点まで道か建物が届くと、その町を使えます。届いていない町も、出張料お金${TRIP}を払えば1手番に1回だけ使えます</li><li><b>増産権</b>（1枚目お金16、2枚目お金24）その物資の生産が2倍になります。1人2枚まで、各町の在庫限りです</li><li><b>納品</b> 注文の物資を渡すと1点とお金${ORDER_PAY}をもらえます。1人3点までです</li></ul>
   <h3>取引</h3><ul><li>手番の人は1手番に${OFFERS}回まで全員に提案できます。最初に受けた人と成立します</li><li>取引掲示板には、手番でなくても1人1件掲示できます。手番の人が受けると成立します</li><li>手番ごとの最初の成立取引では、両者にお金1と取引実績1が入ります</li><li>取引実績が${KING_MIN}回以上で最多の人は<b>取引王</b>となり、${KING}点もらえます</li></ul>
   <h3>お金</h3><ul><li>お金は全員4から始まります。市場の売値は買値の半分です。買うと値上がりし、売ると値下がりします</li><li>権利書はお金12で1点、1人2枚までです。契約書は綿・食料・お金2です</li><li>ミニゲームは${MINI_GAP}周に1回だけ遊べます。荷車の積み込み、七日の相場、線路つなぎから選べて、最大9稼げます</li></ul>
@@ -793,7 +830,7 @@ document.addEventListener('change',e=>{const t=e.target,v=t.value;
 document.addEventListener('click',e=>{
   const s=e.target.closest('[data-n],[data-e],[data-f]');
   if(s&&G&&s.dataset.a===undefined){const d=s.dataset;UI.toast='';
-    if(d.n!==undefined){const n=+d.n;act(G.phase==='setup'?{t:'setupHut',n}:{t:UI.mode,n});UI.mode=null}
+    if(d.n!==undefined){const n=+d.n;const rd=UI.mode==='raid';if(rd)UI.card=null;act(G.phase==='setup'?{t:'setupHut',n}:rd?{t:'play',k:'raid',n}:{t:UI.mode,n});UI.mode=null}
     else if(d.e!==undefined){const x=+d.e;const m=G.bridge>0?'rail':UI.mode;act(G.phase==='setup'?{t:'setupLine',e:x}:m==='upg'||m==='take'?{t:m,e:x}:{t:'line',k:m,e:x});if(!G.bridge)UI.mode=null}
     else act({t:'block',f:+d.f});
     soft();return}
@@ -809,6 +846,7 @@ document.addEventListener('click',e=>{
     lv(){UI.lv=+d.v;ls.set('goka.lv',UI.lv);render()},accept(){act({t:'accept',s:+d.s})},unpost(){act({t:'unpost'})},post(){act({t:'post',give:UI.give,want:UI.want});UI.give={};UI.want={};UI.panel=null;soft()},
     offer(){act({t:'offer',give:UI.give,want:UI.want});UI.give={};UI.want={};UI.panel=null;soft()},
     card(){UI.card=UI.card===d.k?null:d.k;render()},
+    raidgo(){UI.mode='raid';render();toBoard()},
     usecard(){const k=UI.card;UI.card=null;act({t:'play',k});toBoard()},
     fd(){UI.fd=+d.d;render()},fr(){UI.fr=d.r;render()},
     forecast(){const c={t:'play',k:'forecast',d:UI.fd,r:UI.fr};UI.card=null;UI.fd=UI.fr=null;act(c)},
