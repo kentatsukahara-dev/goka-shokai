@@ -13,10 +13,10 @@ const ROOT = __dirname;
 const DATA_DIR = process.env.DATA_DIR || path.join(ROOT, 'data');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
 const HTML = fs.readFileSync(path.join(ROOT, 'seigokaku.html'), 'utf8');
-const MAX_EMIT = 4 * 1024, MAX_TABLES = 300, AWAY_MS = 20000;
+const MAX_EMIT = 4 * 1024, MAX_TABLES = 300, AWAY_MS = 120000;
 
 const engineSrc = /<script id="engine">([\s\S]*?)<\/script>/.exec(HTML)[1];
-const E = new Function(engineSrc + '\nreturn{newGame,apply,cpuAct,viewFor};')();
+const E = new Function(engineSrc + '\nreturn{newGame,apply,cpuAct,viewFor,waitSeats,log,IDLE_MS};')();
 
 // ---------- 保存 ----------
 const docs = new Map();   // 'tables/abcde' | 'stats/n4'
@@ -96,10 +96,11 @@ const onlineUids = code => { const r = rooms.get('g:t' + code); return new Set(r
 
 // ---------- 対局 ----------
 const live = new Map();   // code -> {seen:{uid:time}, nextCpu, done:Set}
-const liveOf = code => { if (!live.has(code)) live.set(code, { seen: {}, nextCpu: 0, done: new Set(), since: Date.now() }); return live.get(code); };
+const liveOf = code => { if (!live.has(code)) live.set(code, { seen: {}, act: {}, mark: 0, nextCpu: 0, done: new Set(), since: Date.now() }); return live.get(code); };
 const cleanName = v => String(v ?? '').replace(/[\u0000-\u001f]/g, '').trim().slice(0, 10) || '名無し';
 function touch(t) { t.rev = (t.rev || 0) + 1; t.updated = Date.now(); changed('tables/' + t.id); }
 function afterMove(t) {
+  liveOf(t.id).mark = Date.now();
   if (t.G.phase === 'over' && t.status !== 'done') {
     t.status = 'done';
     if (t.G.pl.filter(p => p.uid).length >= 2) {
@@ -125,7 +126,10 @@ function onAct(c, code, d) {
   if (!t.G || !isObj(d.a)) return;
   const seat = t.G.pl.findIndex(p => p.uid === c.uid);   // 席は接続の本人から決める
   if (seat < 0 || (d.a.t === 'mg' && d.a.op === 'auto')) return;
-  const L = liveOf(code);
+  const L = liveOf(code), me = t.G.pl[seat];
+  L.act[c.uid] = Date.now();   // 画面に触っている間は離席にしない
+  if (me.afk) { me.afk = false; E.log(t.G, `${me.name}が戻った`); touch(t); }
+  if (d.a.t === 'ping') return;
   if (typeof d.aid === 'string') { if (L.done.has(d.aid)) return; L.done.add(d.aid); if (L.done.size > 500) L.done.clear(); }
   if (!E.apply(t.G, seat, d.a)) afterMove(t);
 }
@@ -134,7 +138,13 @@ function tickTable(t) {
   if (now < L.nextCpu) return;
   const on = onlineUids(t.id);
   for (const u of on) L.seen[u] = now;
-  const auto = i => { const p = G.pl[i]; return p.cpu || (!on.has(p.uid) && now - (L.seen[p.uid] || L.since) > AWAY_MS); };
+  for (const i of E.waitSeats(G)) {   // つながっていても操作が止まった人は離席にする
+    const p = G.pl[i];
+    if (p.uid && !p.cpu && !p.afk && on.has(p.uid) && now - Math.max(L.mark || L.since, L.act[p.uid] || 0) > E.IDLE_MS) {
+      p.afk = true; E.log(G, `${p.name}は操作が止まり離席になった`); touch(t);
+    }
+  }
+  const auto = i => { const p = G.pl[i]; return p.cpu || p.afk || (!on.has(p.uid) && now - (L.seen[p.uid] || L.since) > AWAY_MS); };
   let s = null;
   if (G.offer) {
     const w = G.pl.map((_, i) => i).filter(i => i !== G.offer.from && !G.offer.no.includes(i));
