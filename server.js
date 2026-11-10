@@ -18,6 +18,125 @@ const MAX_EMIT = 4 * 1024, MAX_TABLES = 300, AWAY_MS = 120000;
 const engineSrc = /<script id="engine">([\s\S]*?)<\/script>/.exec(HTML)[1];
 const E = new Function(engineSrc + '\nreturn{newGame,apply,cpuAct,viewFor,waitSeats,log,IDLE_MS};')();
 
+// ---------- アカウント（Supabase）とアバター（xAI） ----------
+// 環境変数が無いときは、今までどおりログインなしで動く
+const SB_URL = (process.env.SUPABASE_URL || '').replace(/\/+$/, '');
+const SB_KEY = process.env.SUPABASE_SERVICE_KEY || '';
+const XAI_KEY = process.env.XAI_API_KEY || '';
+const XAI_BASE = (process.env.XAI_BASE || 'https://api.x.ai').replace(/\/+$/, '');
+const AV_PER_DAY = Number(process.env.AVATAR_PER_DAY) || 3;
+const AUTH = !!(SB_URL && SB_KEY);
+const sbH = (extra) => ({ apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY, ...extra });
+async function sb(method, p, body, headers) {
+  const r = await fetch(SB_URL + p, { method, headers: sbH({ 'content-type': 'application/json', ...(headers || {}) }), body: body === undefined ? undefined : typeof body === 'string' || Buffer.isBuffer(body) ? body : JSON.stringify(body), signal: AbortSignal.timeout(20000) });
+  const txt = await r.text(); let j = null; try { j = JSON.parse(txt); } catch (e) {}
+  return { ok: r.ok, status: r.status, j, txt };
+}
+const tokenCache = new Map();   // access_token -> {acct, until}
+const uidOfUser = id => 'a_' + String(id).replace(/[^A-Za-z0-9]/g, '');
+const acctOf = u => { const m = u.user_metadata || {}; return { id: u.id, uid: uidOfUser(u.id), email: u.email || '', name: m.name ? cleanName(m.name) : '', av: typeof m.av === 'string' ? m.av : '', meta: m }; };
+async function userFromToken(tok) {
+  if (!AUTH || typeof tok !== 'string' || tok.length < 20 || tok.length > 4096) return null;
+  const c = tokenCache.get(tok); if (c && c.until > Date.now()) return c.acct;
+  const r = await fetch(SB_URL + '/auth/v1/user', { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + tok }, signal: AbortSignal.timeout(15000) }).catch(() => null);
+  if (!r || !r.ok) return null;
+  const acct = acctOf(await r.json());
+  if (tokenCache.size > 2000) tokenCache.clear();
+  tokenCache.set(tok, { acct, until: Date.now() + 5 * 60000 });
+  return acct;
+}
+async function saveMeta(acct, patch) {
+  const meta = { ...acct.meta, ...patch };
+  const r = await sb('PUT', '/auth/v1/admin/users/' + encodeURIComponent(acct.id), { user_metadata: meta });
+  if (!r.ok) throw new Error('meta ' + r.status);
+  acct.meta = meta; if (patch.av !== undefined) acct.av = patch.av; if (patch.name !== undefined) acct.name = cleanName(patch.name);
+  for (const [k, v] of tokenCache) if (v.acct.id === acct.id) tokenCache.delete(k);
+  for (const c of clients) if (c.acct && c.acct.id === acct.id) { c.acct = { ...c.acct, av: acct.av, name: acct.name, meta }; }
+  for (const [k, t] of docs) if (k.startsWith('tables/') && t.seats && t.seats.some(x => x.uid === acct.uid)) { for (const x of t.seats) if (x.uid === acct.uid) x.av = acct.av; touch(t); }
+}
+if (AUTH) sb('POST', '/storage/v1/bucket', { id: 'avatars', name: 'avatars', public: true }).then(r => console.log('avatars bucket', r.status)).catch(e => console.log('bucket', e.message));
+
+const AV_PROMPT = 'Turn the person in this photo into a cute chibi (super-deformed) character avatar for a cozy board game. ' +
+  'Big head, small body, friendly smiling face. Keep the hairstyle, hair color, glasses, facial hair and clothing colors from the photo so the person is recognizable. ' +
+  'Hand-painted gouache storybook illustration, warm muted colors, soft lighting. Bust-up portrait centered on a plain deep green background. Square image, no text, no border, only one character.';
+async function makeAvatar(acct, dataUri) {
+  const today = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
+  const g = acct.meta.gen && acct.meta.gen.day === today ? acct.meta.gen : { day: today, n: 0 };
+  if (g.n >= AV_PER_DAY) return { err: 'limit' };
+  const r = await fetch(XAI_BASE + '/v1/images/edits', {
+    method: 'POST', headers: { 'content-type': 'application/json', Authorization: 'Bearer ' + XAI_KEY },
+    body: JSON.stringify({ model: 'grok-imagine-image-2.0', prompt: AV_PROMPT, image: { url: dataUri, type: 'image_url' } }),
+    signal: AbortSignal.timeout(150000),
+  });
+  const txt = await r.text(); let j = null; try { j = JSON.parse(txt); } catch (e) {}
+  if (!r.ok || !j || !Array.isArray(j.data) || !j.data[0]) { console.error('xai', r.status, txt.slice(0, 300)); return { err: r.status === 400 ? 'rejected' : 'xai' }; }
+  let img;
+  if (j.data[0].b64_json) img = Buffer.from(j.data[0].b64_json, 'base64');
+  else { const d = await fetch(j.data[0].url, { signal: AbortSignal.timeout(60000) }); if (!d.ok) return { err: 'xai' }; img = Buffer.from(await d.arrayBuffer()); }
+  const type = img[0] === 0x89 ? 'image/png' : img[0] === 0x52 ? 'image/webp' : 'image/jpeg';
+  const file = acct.id + '/' + Date.now() + (type === 'image/png' ? '.png' : type === 'image/webp' ? '.webp' : '.jpg');
+  const up = await fetch(SB_URL + '/storage/v1/object/avatars/' + file, { method: 'POST', headers: sbH({ 'content-type': type, 'x-upsert': 'true' }), body: img, signal: AbortSignal.timeout(30000) });
+  if (!up.ok) { console.error('upload', up.status, (await up.text()).slice(0, 200)); return { err: 'store' }; }
+  const url = SB_URL + '/storage/v1/object/public/avatars/' + file;
+  await saveMeta(acct, { av: url, gen: { day: today, n: g.n + 1 } });
+  return { url, left: AV_PER_DAY - g.n - 1 };
+}
+const ipHits = new Map();
+function slow(ip, key, ms) { const k = ip + ' ' + key, t = ipHits.get(k) || 0; if (Date.now() - t < ms) return true; ipHits.set(k, Date.now()); if (ipHits.size > 5000) ipHits.clear(); return false; }
+function readJson(req, max) {
+  return new Promise((ok, ng) => { const b = []; let n = 0;
+    req.on('data', c => { n += c.length; if (n > max) { ng(new Error('too_large')); req.destroy(); } else b.push(c); });
+    req.on('end', () => { try { ok(JSON.parse(Buffer.concat(b).toString('utf8') || '{}')); } catch (e) { ng(new Error('bad_json')); } }); req.on('error', ng); });
+}
+const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,}$/;
+async function api(req, res, url) {
+  const out = (code, o) => { res.writeHead(code, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' }); res.end(JSON.stringify(o)); };
+  if (req.method !== 'POST') return out(405, { err: 'method' });
+  if (!AUTH) return out(503, { err: 'auth_off' });
+  const ip = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
+  let d; try { d = await readJson(req, url === '/api/avatar' ? 4e6 : 8192); } catch (e) { return out(400, { err: e.message }); }
+  if (url === '/api/auth/start') {
+    const email = String(d.email || '').trim().toLowerCase();
+    if (!EMAIL.test(email)) return out(400, { err: 'bad_email' });
+    if (slow(ip, 'start', 20000) || slow(email, 'start', 50000)) return out(429, { err: 'too_fast' });
+    const origin = 'https://' + String(req.headers['x-forwarded-host'] || req.headers.host || '').replace(/[^A-Za-z0-9.:\-]/g, '');
+    const r = await sb('POST', '/auth/v1/otp?redirect_to=' + encodeURIComponent(origin + '/'), { email, create_user: true });
+    if (!r.ok) { console.error('otp', r.status, r.txt.slice(0, 200)); return out(r.status === 429 ? 429 : 502, { err: r.status === 429 ? 'mail_limit' : 'send_failed' }); }
+    return out(200, { ok: true });
+  }
+  if (url === '/api/auth/verify') {
+    const email = String(d.email || '').trim().toLowerCase(), code = String(d.code || '').replace(/\s/g, '');
+    if (!EMAIL.test(email) || !/^\d{6,10}$/.test(code)) return out(400, { err: 'bad_code' });
+    if (slow(ip, 'verify', 1500)) return out(429, { err: 'too_fast' });
+    const r = await sb('POST', '/auth/v1/verify', { type: 'email', email, token: code });
+    if (!r.ok || !r.j || !r.j.access_token) return out(400, { err: 'bad_code' });
+    return out(200, { access_token: r.j.access_token, refresh_token: r.j.refresh_token, expires_in: r.j.expires_in });
+  }
+  if (url === '/api/auth/refresh') {
+    const rt = String(d.refresh_token || '');
+    if (!rt || rt.length > 512) return out(400, { err: 'bad_token' });
+    const r = await sb('POST', '/auth/v1/token?grant_type=refresh_token', { refresh_token: rt });
+    if (!r.ok || !r.j || !r.j.access_token) return out(401, { err: 'bad_token' });
+    return out(200, { access_token: r.j.access_token, refresh_token: r.j.refresh_token, expires_in: r.j.expires_in });
+  }
+  const tok = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+  const acct = await userFromToken(tok);
+  if (!acct) return out(401, { err: 'login' });
+  if (url === '/api/profile') {
+    await saveMeta(acct, { name: cleanName(d.name) });
+    return out(200, { name: acct.name });
+  }
+  if (url === '/api/avatar') {
+    if (!XAI_KEY) return out(503, { err: 'avatar_off' });
+    const img = String(d.image || '');
+    if (!/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(img) || img.length > 3.5e6) return out(400, { err: 'bad_image' });
+    if (slow(acct.id, 'avatar', 20000)) return out(429, { err: 'too_fast' });
+    try { const r = await makeAvatar(acct, img); return out(r.err ? (r.err === 'limit' ? 429 : 502) : 200, r); }
+    catch (e) { console.error('avatar', e); return out(502, { err: 'xai' }); }
+  }
+  return out(404, { err: 'not_found' });
+}
+
 // ---------- 保存 ----------
 const docs = new Map();   // 'tables/abcde' | 'stats/n4'
 const auth = new Map();   // uid -> sha256(secret)
@@ -115,7 +234,8 @@ function onAct(c, code, d) {
   if (!t || !isObj(d)) return;
   if (d.sit !== undefined) {
     if (t.status !== 'wait' || t.seats.length >= t.size || t.seats.some(s => s.uid === c.uid)) return;
-    t.seats.push({ uid: c.uid, name: cleanName(d.sit) }); touch(t); return;
+    if (AUTH && !c.acct) return;
+    t.seats.push({ uid: c.uid, name: cleanName(d.sit), av: c.acct ? c.acct.av : '' }); touch(t); return;
   }
   if (d.start) {
     if (t.status !== 'wait' || !t.seats[0] || t.seats[0].uid !== c.uid) return;
@@ -165,7 +285,7 @@ setInterval(() => {
 
 // ---------- 接続 ----------
 class Client {
-  constructor(ws) { this.ws = ws; this.uid = null; this.peer = 'p' + crypto.randomBytes(9).toString('hex'); this.subs = new Map(); this.presence = new Map(); this.lastTable = 0; }
+  constructor(ws) { this.ws = ws; this.uid = null; this.acct = null; this.peer = 'p' + crypto.randomBytes(9).toString('hex'); this.subs = new Map(); this.presence = new Map(); this.lastTable = 0; }
   send(o) { if (this.ws.readyState === 1) this.ws.send(JSON.stringify(o)); }
 }
 function createTable(c, p, d) {
@@ -175,9 +295,10 @@ function createTable(c, p, d) {
   let n = 0; for (const k of docs.keys()) if (k.startsWith('tables/')) n++;
   if (n >= MAX_TABLES) return 'full';
   const size = [2, 3, 4].includes(d.size) ? d.size : 4, target = [16, 20, 24].includes(d.target) ? d.target : 20;
+  if (AUTH && !c.acct) return 'login';
   const name = cleanName(d.seats && d.seats[0] && d.seats[0].name);
   c.lastTable = Date.now();
-  docs.set(p, { id, status: 'wait', seats: [{ uid: c.uid, name }], size, map: 1, target, created: Date.now(), updated: Date.now(), rev: 1 });
+  docs.set(p, { id, status: 'wait', seats: [{ uid: c.uid, name, av: c.acct ? c.acct.av : '' }], size, map: 1, target, created: Date.now(), updated: Date.now(), rev: 1 });
   changed(p); return null;
 }
 function handle(c, m) {
@@ -185,12 +306,24 @@ function handle(c, m) {
   const ng = err => c.send({ t: 'res', id: m.id, ok: false, err });
   if (m.op === 'hello') {
     const { uid, secret } = m;
+    if (AUTH && m.token) {
+      userFromToken(m.token).then(acct => {
+        if (!acct) { c.uid = null; c.acct = null; return helloGuest(true); }
+        c.uid = acct.uid; c.acct = acct;
+        ok({ uid: acct.uid, admin: false, peer: c.peer, auth: true, avatarOn: !!XAI_KEY, acct: { email: acct.email, name: acct.name, av: acct.av } });
+      }).catch(() => helloGuest(true));
+      return;
+    }
+    return helloGuest(false);
+  }
+  function helloGuest(tokenBad) {
+    const { uid, secret } = m;
     if (typeof uid !== 'string' || !/^u_[A-Za-z0-9]{10,40}$/.test(uid) || typeof secret !== 'string' || secret.length < 20) return ng('bad_identity');
     const h = crypto.createHash('sha256').update(secret).digest('hex');
     if (auth.has(uid) && auth.get(uid) !== h) return ng('bad_secret');
     if (!auth.has(uid)) { auth.set(uid, h); scheduleSave(); }
-    c.uid = uid;
-    return ok({ uid, admin: false, peer: c.peer });
+    c.uid = uid; c.acct = null;
+    return ok({ uid, admin: false, peer: c.peer, auth: AUTH, avatarOn: AUTH && !!XAI_KEY, acct: null, tokenBad });
   }
   if (!c.uid) return ng('not_ready');
   const segs = m.path !== undefined ? splitPath(m.path) : null;
@@ -248,6 +381,7 @@ const server = http.createServer((req, res) => {
     if (url === '/' || url === '/index.html') { res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-cache' }); return res.end(page()); }
     if (url === '/shim.js') { res.writeHead(200, { 'content-type': 'text/javascript; charset=utf-8', 'cache-control': 'no-cache' }); return res.end(fs.readFileSync(path.join(ROOT, 'shim.js'))); }
     if (url === '/healthz') { res.writeHead(200, { 'content-type': 'text/plain' }); return res.end('ok'); }
+    if (url.startsWith('/api/')) return void api(req, res, url).catch(e => { console.error('api', e); if (!res.headersSent) { res.writeHead(500); res.end('{"err":"server"}'); } });
   } catch (e) { console.error(e); res.writeHead(500); return res.end('error'); }
   res.writeHead(404, { 'content-type': 'text/plain' }); res.end('not found');
 });
