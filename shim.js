@@ -19,6 +19,45 @@
   if (hm) { ls.set(ADMIN_KEY, decodeURIComponent(hm[1])); history.replaceState(null, '', location.pathname + location.search); }
   const adminKey = ls.get(ADMIN_KEY) || '';
 
+  // ---------- ログイン（メールのコード、またはメールのリンク） ----------
+  const AUTH_KEY = 'goka.auth';
+  let tok = null;
+  try { tok = JSON.parse(ls.get(AUTH_KEY) || 'null'); } catch (e) {}
+  const saveTok = j => { tok = j ? { a: j.access_token, r: j.refresh_token, exp: Date.now() + (Number(j.expires_in) || 3600) * 1000 } : null; if (tok) ls.set(AUTH_KEY, JSON.stringify(tok)); else { try { localStorage.removeItem(AUTH_KEY); } catch (e) {} } };
+  // メールのリンクから戻ったとき: #access_token=...&refresh_token=...
+  if (/access_token=/.test(location.hash)) {
+    const q = new URLSearchParams(location.hash.slice(1));
+    if (q.get('access_token')) saveTok({ access_token: q.get('access_token'), refresh_token: q.get('refresh_token'), expires_in: q.get('expires_in') });
+    history.replaceState(null, '', location.pathname + location.search);
+  }
+  const post = async (p, body, auth) => {
+    const r = await fetch(p, { method: 'POST', headers: { 'content-type': 'application/json', ...(auth ? { authorization: 'Bearer ' + auth } : {}) }, body: JSON.stringify(body) });
+    let j = {}; try { j = await r.json(); } catch (e) {}
+    if (!r.ok) throw { code: j.err || ('http_' + r.status), status: r.status };
+    return j;
+  };
+  async function freshToken() {
+    if (!tok) return null;
+    if (tok.exp - Date.now() > 120000) return tok.a;
+    try { saveTok(await post('/api/auth/refresh', { refresh_token: tok.r })); return tok.a; }
+    catch (e) { if (e.status === 401 || e.status === 400) saveTok(null); return tok && tok.a; }
+  }
+  // 写真を768px以内のJPEGに縮める
+  async function shrink(file) {
+    const bmp = await createImageBitmap(file);
+    const k = Math.min(1, 768 / Math.max(bmp.width, bmp.height)), w = Math.round(bmp.width * k), h = Math.round(bmp.height * k);
+    const cv = document.createElement('canvas'); cv.width = w; cv.height = h; cv.getContext('2d').drawImage(bmp, 0, 0, w, h);
+    return cv.toDataURL('image/jpeg', 0.86);
+  }
+  const account = Object.freeze({
+    info: () => helloInfo ? { on: !!helloInfo.auth, avatarOn: !!helloInfo.avatarOn, acct: helloInfo.acct || null } : { on: false, avatarOn: false, acct: null },
+    start: email => post('/api/auth/start', { email }),
+    verify: async (email, code) => { saveTok(await post('/api/auth/verify', { email, code })); location.reload(); },
+    logout: () => { saveTok(null); location.reload(); },
+    setName: async name => post('/api/profile', { name }, await freshToken()),
+    avatar: async file => { const image = await shrink(file); return post('/api/avatar', { image }, await freshToken()); },
+  });
+
   // ---------- 接続 ----------
   let ws = null, open = false, nextId = 1, retry = 0, helloInfo = null;
   const pending = new Map();   // id -> {resolve, reject, msg}
@@ -38,7 +77,7 @@
   function connect() {
     const url = (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws';
     ws = new WebSocket(url);
-    ws.onopen = () => { open = true; retry = 0; hello(); };
+    ws.onopen = () => { open = true; retry = 0; freshToken().then(hello, hello); };
     ws.onclose = () => {
       open = false; helloInfo = null;
       // 返事の来ていない依頼は、つながり直したら送り直す
@@ -61,10 +100,11 @@
       }
     };
   }
-  function hello() { ws.send(JSON.stringify({ op: 'hello', id: 'hello', uid: ident.uid, secret: ident.secret, admin: adminKey })); }
+  function hello() { if (ws && ws.readyState === 1) ws.send(JSON.stringify({ op: 'hello', id: 'hello', uid: ident.uid, secret: ident.secret, admin: adminKey, token: tok ? tok.a : undefined })); }
   function onHello(m) {
     if (!m.ok) { if (m.err === 'bad_secret' || m.err === 'bad_identity') { newIdent(); hello(); } return; }
     helloInfo = m.data;
+    if (helloInfo.tokenBad) saveTok(null);
     // つながり直したときは、購読と部屋をやり直す
     for (const [id, s] of subs) rawSend({ ...s.msg, id: 'r' + id });
     for (const r of rooms.values()) r._rejoin();
@@ -135,8 +175,8 @@
 
   // ---------- user ----------
   const user = Object.freeze({
-    id: async () => ident.uid,
-    me: async () => ({ id: ident.uid, name: '', guest: false }),
+    id: async () => (helloInfo && helloInfo.uid) || ident.uid,
+    me: async () => ({ id: (helloInfo && helloInfo.uid) || ident.uid, name: (helloInfo && helloInfo.acct && helloInfo.acct.name) || '', guest: false }),
     isOwner: () => !!(helloInfo && helloInfo.admin),
     canEdit: async () => !!(helloInfo && helloInfo.admin),
     can: () => null,
@@ -153,5 +193,5 @@
     if (name === 'room') { if (!lobby) lobby = makeRoom('lobby', true); return lobby; }
     return null;
   }
-  window.claude = Object.freeze({ use, server: true });
+  window.claude = Object.freeze({ use, server: true, account });
 })();
