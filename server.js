@@ -294,7 +294,7 @@ function createTable(c, p, d) {
   if (Date.now() - c.lastTable < 3000) return 'too_fast';
   let n = 0; for (const k of docs.keys()) if (k.startsWith('tables/')) n++;
   if (n >= MAX_TABLES) return 'full';
-  const size = [2, 3, 4].includes(d.size) ? d.size : 4, target = [16, 20, 24].includes(d.target) ? d.target : 20;
+  const size = [2, 3, 4, 5].includes(d.size) ? d.size : 4, target = [16, 20, 24].includes(d.target) ? d.target : 20;
   if (AUTH && !c.acct) return 'login';
   const name = cleanName(d.seats && d.seats[0] && d.seats[0].name);
   c.lastTable = Date.now();
