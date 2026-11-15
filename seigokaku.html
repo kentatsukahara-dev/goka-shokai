@@ -311,7 +311,10 @@ function cleanBag(b){const o={};let t=0;if(b&&typeof b==='object')KEYS.forEach(r
 /* 手番ごとの最初の成立取引は、両者にお金1と取引実績1。実績最多（3回以上）が取引王 */
 function doTrade(G,f,p,give,want){pay(f,give);gain(f,want);pay(p,want);gain(p,give);log(G,`${f.name}と${p.name}が取引した（${bagTxt(give)} ⇄ ${bagTxt(want)}）`);
   if(G.tb)return;G.tb=true;[f,p].forEach(q=>{q.hand.money++;q.tr=(q.tr||0)+1;const i=G.pl.indexOf(q);if(q.tr>=KING_MIN&&G.king!==i&&(G.king===null||q.tr>(G.pl[G.king].tr||0))){G.king=i;log(G,`${q.name}が取引王になった（+${KING}点）`)}})}
-function apply(G,seat,a){
+const USE_T=['hut','st','fac','upg','line','take','seize','buy','mbuy','msell','offer','accept','deed','deliver','block','item','mg'];
+function apply(G,seat,a){const e=apply0(G,seat,a),p=G.pl[seat];if(!e&&p&&a){const k=a.t==='play'||a.t==='spmake'?a.t+':'+a.k:USE_T.includes(a.t)?a.t:null;if(k){const u=p.use||(p.use={});u[k]=(u[k]||0)+1}}return e}
+function gameRecord(G){return{n:G.n,target:G.target,lv:G.lv??1,turn:G.turn,winner:G.winner,pl:G.pl.map((q,i)=>({cpu:!!q.cpu,vp:fullVP(G,i),pub:pubVP(G,i),h:count(G,i,'h'),s:count(G,i,'s'),o:count(G,i,'o'),loot:q.loot||0,deeds:q.deeds||0,ord:q.ord||0,road:G.road===i,king:G.king===i,surv:G.surv===i,use:q.use||{}}))}}
+function apply0(G,seat,a){
   if(!a||typeof a!=='object'||G.phase==='over')return'今は操作できません';
   const p=G.pl[seat];if(!p)return'席がありません';const t=a.t;
   if(t==='resign'){p.cpu=true;log(G,`${p.name}は席を立ち、CPUが代わります`);G.seq++;return null}
@@ -726,6 +729,7 @@ function diceFx(){if(!G||UI.screen!=='game')return;const k=G.dA!==null?G.tick:nu
     if(el&&G&&G.dA!==null){const f=diceFaces(G,on);el.querySelectorAll('b').forEach((b,i)=>{b.textContent=f[i]})}
     if(!on){clearInterval(UI.dt);el?.classList.remove('rolling');soft()}},80)}
 function render(){
+  if(SRV&&NET.local&&G&&G.phase==='over'&&!G.sent){G.sent=1;try{fetch('/api/game',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({rec:gameRecord(G)})}).catch(()=>{})}catch(e){}}
   diceFx();if(G&&UI.iq!==G.seq){UI.iq=G.seq;UI.idle0=Date.now()}$('app').innerHTML=UI.screen==='game'&&G?gameView():UI.screen==='lobby'?lobbyView():UI.screen==='rules'?rulesView():titleView();
   miniDraw();const sc=!!G&&UI.screen==='game'&&G.phase==='block'&&seatOf()===G.cur;if(sc&&!UI.sc)toBoard();UI.sc=sc}
 function toBoard(){if(window.innerWidth<=820)document.querySelector('.board')?.scrollIntoView({behavior:'smooth',block:'start'})}
