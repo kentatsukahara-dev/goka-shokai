@@ -16,7 +16,7 @@ const HTML = fs.readFileSync(path.join(ROOT, 'seigokaku.html'), 'utf8');
 const MAX_EMIT = 4 * 1024, MAX_TABLES = 300, AWAY_MS = 120000;
 
 const engineSrc = /<script id="engine">([\s\S]*?)<\/script>/.exec(HTML)[1];
-const E = new Function(engineSrc + '\nreturn{newGame,apply,cpuAct,viewFor,waitSeats,log,IDLE_MS};')();
+const E = new Function(engineSrc + '\nreturn{newGame,apply,cpuAct,viewFor,waitSeats,log,IDLE_MS,gameRecord};')();
 
 // ---------- アカウント（Supabase）とアバター（xAI） ----------
 // 環境変数が無いときは、今までどおりログインなしで動く
@@ -53,6 +53,34 @@ async function saveMeta(acct, patch) {
   for (const [k, v] of tokenCache) if (v.acct.id === acct.id) tokenCache.delete(k);
   for (const c of clients) if (c.acct && c.acct.id === acct.id) { c.acct = { ...c.acct, av: acct.av, name: acct.name, meta }; }
   for (const [k, t] of docs) if (k.startsWith('tables/') && t.seats && t.seats.some(x => x.uid === acct.uid)) { for (const x of t.seats) if (x.uid === acct.uid) x.av = acct.av; touch(t); }
+}
+if (AUTH) sb('POST', '/storage/v1/bucket', { id: 'games', name: 'games', public: false }).then(r => console.log('games bucket', r.status)).catch(e => console.log('bucket', e.message));
+// ---------- 試合の記録（Supabase Storage の games に1試合1ファイル。名前やメールは入れない） ----------
+const num = (v, lo, hi) => { v = Math.round(Number(v)); return Number.isFinite(v) ? Math.max(lo, Math.min(hi, v)) : 0; };
+function cleanRec(r, src) {
+  if (!isObj(r) || !Array.isArray(r.pl) || r.pl.length < 2 || r.pl.length > 5) return null;
+  const use = u => { const o = {}; if (isObj(u)) for (const [k, v] of Object.entries(u).slice(0, 40)) if (/^[a-z:]{1,20}$/.test(k)) o[k] = num(v, 0, 9999); return o; };
+  return { at: new Date().toISOString(), src, n: r.pl.length, target: num(r.target, 0, 99), lv: num(r.lv, 0, 4), turn: num(r.turn, 0, 9999), winner: num(r.winner, -1, 4),
+    pl: r.pl.map(q => ({ cpu: !!(q && q.cpu), vp: num(q && q.vp, 0, 99), pub: num(q && q.pub, 0, 99), h: num(q && q.h, 0, 99), s: num(q && q.s, 0, 99), o: num(q && q.o, 0, 99), loot: num(q && q.loot, 0, 9), deeds: num(q && q.deeds, 0, 99), ord: num(q && q.ord, 0, 99), road: !!(q && q.road), king: !!(q && q.king), surv: !!(q && q.surv), use: use(q && q.use) })) };
+}
+let gamesCache = null;
+async function saveGame(rec) {
+  if (!AUTH || !rec || !rec.pl.some(q => !q.cpu)) return;
+  const p = rec.at.slice(0, 10) + '/' + rec.at.slice(11, 19).replace(/:/g, '') + '-' + crypto.randomBytes(4).toString('hex') + '.json';
+  const r = await sb('POST', '/storage/v1/object/games/' + p, JSON.stringify(rec), { 'content-type': 'application/json' }).catch(e => ({ ok: false, status: e.message }));
+  if (!r.ok) console.log('game save', r.status); else gamesCache = null;
+}
+async function listGames() {
+  if (gamesCache && gamesCache.until > Date.now()) return gamesCache.list;
+  const ls = async prefix => { const r = await sb('POST', '/storage/v1/object/list/games', { prefix, limit: 1000, sortBy: { column: 'name', order: 'asc' } }); return r.ok && Array.isArray(r.j) ? r.j : []; };
+  const days = (await ls('')).filter(x => !x.id).map(x => x.name), out = [];
+  for (const d of days) for (const f of await ls(d)) {
+    if (!f.id) continue;
+    const r = await sb('GET', '/storage/v1/object/authenticated/games/' + d + '/' + f.name).catch(() => null);
+    if (r && r.ok && r.j) out.push(r.j);
+  }
+  gamesCache = { list: out, until: Date.now() + 60000 };
+  return out;
 }
 if (AUTH) sb('POST', '/storage/v1/bucket', { id: 'avatars', name: 'avatars', public: true }).then(r => console.log('avatars bucket', r.status)).catch(e => console.log('bucket', e.message));
 
@@ -91,10 +119,16 @@ function readJson(req, max) {
 const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,}$/;
 async function api(req, res, url) {
   const out = (code, o) => { res.writeHead(code, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' }); res.end(JSON.stringify(o)); };
-  if (req.method !== 'POST') return out(405, { err: 'method' });
   if (!AUTH) return out(503, { err: 'auth_off' });
+  if (url === '/api/games' && req.method === 'GET') return out(200, { games: await listGames() });
+  if (req.method !== 'POST') return out(405, { err: 'method' });
   const ip = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
   let d; try { d = await readJson(req, url === '/api/avatar' ? 4e6 : 8192); } catch (e) { return out(400, { err: e.message }); }
+  if (url === '/api/game') {
+    if (slow(ip, 'game', 20000)) return out(429, { err: 'slow' });
+    const rec = cleanRec(d.rec, 'solo'); if (!rec) return out(400, { err: 'bad_rec' });
+    await saveGame(rec); return out(200, { ok: true });
+  }
   if (url === '/api/auth/start') {
     const email = String(d.email || '').trim().toLowerCase();
     if (!EMAIL.test(email)) return out(400, { err: 'bad_email' });
@@ -226,6 +260,7 @@ function afterMove(t) {
       const n = t.G.n, k = 'stats/n' + n, x = docs.get(k) || { n, games: 0, wins: new Array(n).fill(0) };
       x.games++; x.wins[t.G.winner]++; docs.set(k, x); changed(k);
     }
+    try { saveGame(cleanRec(E.gameRecord(t.G), 'online')).catch(e => console.log('game save', e.message)); } catch (e) { console.log('game rec', e.message); }
   }
   touch(t);
 }
