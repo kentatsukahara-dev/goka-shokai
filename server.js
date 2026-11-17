@@ -57,11 +57,13 @@ async function saveMeta(acct, patch) {
 if (AUTH) sb('POST', '/storage/v1/bucket', { id: 'games', name: 'games', public: false }).then(r => console.log('games bucket', r.status)).catch(e => console.log('bucket', e.message));
 // ---------- 試合の記録（Supabase Storage の games に1試合1ファイル。名前やメールは入れない） ----------
 const num = (v, lo, hi) => { v = Math.round(Number(v)); return Number.isFinite(v) ? Math.max(lo, Math.min(hi, v)) : 0; };
-function cleanRec(r, src) {
+const emailOf = new Map();   // uid -> メール（ログイン中に覚える）
+const STATS_EMAILS = (process.env.STATS_EMAILS || 'company@bildram.com').toLowerCase().split(/[\s,]+/).filter(Boolean);
+function cleanRec(r, src, soloAcct) {
   if (!isObj(r) || !Array.isArray(r.pl) || r.pl.length < 2 || r.pl.length > 5) return null;
   const use = u => { const o = {}; if (isObj(u)) for (const [k, v] of Object.entries(u).slice(0, 40)) if (/^[a-z:]{1,20}$/.test(k)) o[k] = num(v, 0, 9999); return o; };
   return { at: new Date().toISOString(), src, n: r.pl.length, target: num(r.target, 0, 99), lv: num(r.lv, 0, 4), turn: num(r.turn, 0, 9999), winner: num(r.winner, -1, 4),
-    pl: r.pl.map(q => ({ cpu: !!(q && q.cpu), vp: num(q && q.vp, 0, 99), pub: num(q && q.pub, 0, 99), h: num(q && q.h, 0, 99), s: num(q && q.s, 0, 99), o: num(q && q.o, 0, 99), loot: num(q && q.loot, 0, 9), deeds: num(q && q.deeds, 0, 99), ord: num(q && q.ord, 0, 99), road: !!(q && q.road), king: !!(q && q.king), surv: !!(q && q.surv), use: use(q && q.use) })) };
+    pl: r.pl.map(q => ({ name: cleanName(q && q.name), email: q && !q.cpu ? (soloAcct ? soloAcct.email : (q.uid && emailOf.get(String(q.uid))) || '') : '', cpu: !!(q && q.cpu), vp: num(q && q.vp, 0, 99), pub: num(q && q.pub, 0, 99), h: num(q && q.h, 0, 99), s: num(q && q.s, 0, 99), o: num(q && q.o, 0, 99), loot: num(q && q.loot, 0, 9), deeds: num(q && q.deeds, 0, 99), ord: num(q && q.ord, 0, 99), road: !!(q && q.road), king: !!(q && q.king), surv: !!(q && q.surv), use: use(q && q.use) })) };
 }
 let gamesCache = null;
 async function saveGame(rec) {
@@ -120,13 +122,18 @@ const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,}$/;
 async function api(req, res, url) {
   const out = (code, o) => { res.writeHead(code, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' }); res.end(JSON.stringify(o)); };
   if (!AUTH) return out(503, { err: 'auth_off' });
-  if (url === '/api/games' && req.method === 'GET') return out(200, { games: await listGames() });
+  if (url === '/api/games' && req.method === 'GET') {
+    const a = await userFromToken(String(req.headers.authorization || '').replace(/^Bearer\s+/i, ''));
+    if (!a || !STATS_EMAILS.includes(String(a.email).toLowerCase())) return out(403, { err: 'forbidden' });
+    return out(200, { games: await listGames() });
+  }
   if (req.method !== 'POST') return out(405, { err: 'method' });
   const ip = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
   let d; try { d = await readJson(req, url === '/api/avatar' ? 4e6 : 8192); } catch (e) { return out(400, { err: e.message }); }
   if (url === '/api/game') {
     if (slow(ip, 'game', 20000)) return out(429, { err: 'slow' });
-    const rec = cleanRec(d.rec, 'solo'); if (!rec) return out(400, { err: 'bad_rec' });
+    const a = await userFromToken(String(req.headers.authorization || '').replace(/^Bearer\s+/i, ''));
+    const rec = cleanRec(d.rec, 'solo', a || { email: '' }); if (!rec) return out(400, { err: 'bad_rec' });
     await saveGame(rec); return out(200, { ok: true });
   }
   if (url === '/api/auth/start') {
@@ -191,7 +198,30 @@ function writeNow() {
   } catch (e) { console.error('save failed', e.message); }
 }
 let saveTimer = null;
+// Render の無料プランはデプロイで手元のファイルが消えるので、同じ中身を Supabase Storage の state/db.json にも置く
+let pushTimer = null, pushing = null;
+async function pushRemote() {
+  if (!AUTH) return;
+  const body = JSON.stringify({ docs: Object.fromEntries(docs), auth: Object.fromEntries(auth) });
+  const r = await sb('POST', '/storage/v1/object/state/db.json', body, { 'content-type': 'application/json', 'x-upsert': 'true' }).catch(e => ({ ok: false, status: e.message }));
+  if (!r.ok) console.log('remote save', r.status);
+}
+function schedulePush() {
+  if (!AUTH || pushTimer) return;
+  pushTimer = setTimeout(() => { pushTimer = null; pushing = pushRemote().finally(() => { pushing = null; }); }, 15000);
+}
+async function loadRemote() {
+  if (!AUTH) return;
+  await sb('POST', '/storage/v1/bucket', { id: 'state', name: 'state', public: false }).catch(() => null);
+  const r = await sb('GET', '/storage/v1/object/authenticated/state/db.json').catch(() => null);
+  if (!r || !r.ok || !r.j) { console.log('no remote data', r && r.status); if (docs.size || auth.size) schedulePush(); return; }
+  docs.clear(); auth.clear();
+  for (const [k, v] of Object.entries(r.j.docs || {})) docs.set(k, v);
+  for (const [k, v] of Object.entries(r.j.auth || {})) auth.set(k, v);
+  console.log(`loaded ${docs.size} docs from remote`);
+}
 function scheduleSave() {
+  schedulePush();
   if (saveTimer) return;
   saveTimer = setTimeout(() => {
     saveTimer = null;
@@ -345,6 +375,7 @@ function handle(c, m) {
       userFromToken(m.token).then(acct => {
         if (!acct) { c.uid = null; c.acct = null; return helloGuest(true); }
         c.uid = acct.uid; c.acct = acct;
+        emailOf.set(acct.uid, acct.email); if (emailOf.size > 5000) emailOf.clear();
         ok({ uid: acct.uid, admin: false, peer: c.peer, auth: true, avatarOn: !!XAI_KEY, acct: { email: acct.email, name: acct.name, av: acct.av } });
       }).catch(() => helloGuest(true));
       return;
@@ -434,5 +465,10 @@ wss.on('connection', ws => {
 setInterval(() => { for (const ws of wss.clients) { if (!ws.isAlive) { ws.terminate(); continue; } ws.isAlive = false; ws.ping(); } }, 20000);
 
 load();
-server.listen(PORT, () => console.log(`goka-shokai server on :${PORT}`));
-process.on('SIGTERM', () => { writeNow(); process.exit(0); });
+loadRemote().catch(e => console.log('remote load', e.message)).finally(() => server.listen(PORT, () => console.log(`goka-shokai server on :${PORT}`)));
+process.on('SIGTERM', async () => {
+  writeNow();
+  if (pushTimer) { clearTimeout(pushTimer); pushTimer = null; }
+  await Promise.race([(pushing || Promise.resolve()).then(pushRemote), new Promise(r => setTimeout(r, 15000))]).catch(() => {});
+  process.exit(0);
+});
