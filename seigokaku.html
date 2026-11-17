@@ -313,7 +313,7 @@ function doTrade(G,f,p,give,want){pay(f,give);gain(f,want);pay(p,want);gain(p,gi
   if(G.tb)return;G.tb=true;[f,p].forEach(q=>{q.hand.money++;q.tr=(q.tr||0)+1;const i=G.pl.indexOf(q);if(q.tr>=KING_MIN&&G.king!==i&&(G.king===null||q.tr>(G.pl[G.king].tr||0))){G.king=i;log(G,`${q.name}が取引王になった（+${KING}点）`)}})}
 const USE_T=['hut','st','fac','upg','line','take','seize','buy','mbuy','msell','offer','accept','deed','deliver','block','item','mg'];
 function apply(G,seat,a){const e=apply0(G,seat,a),p=G.pl[seat];if(!e&&p&&a){const k=a.t==='play'||a.t==='spmake'?a.t+':'+a.k:USE_T.includes(a.t)?a.t:null;if(k){const u=p.use||(p.use={});u[k]=(u[k]||0)+1}}return e}
-function gameRecord(G){return{n:G.n,target:G.target,lv:G.lv??1,turn:G.turn,winner:G.winner,pl:G.pl.map((q,i)=>({cpu:!!q.cpu,vp:fullVP(G,i),pub:pubVP(G,i),h:count(G,i,'h'),s:count(G,i,'s'),o:count(G,i,'o'),loot:q.loot||0,deeds:q.deeds||0,ord:q.ord||0,road:G.road===i,king:G.king===i,surv:G.surv===i,use:q.use||{}}))}}
+function gameRecord(G){return{n:G.n,target:G.target,lv:G.lv??1,turn:G.turn,winner:G.winner,pl:G.pl.map((q,i)=>({name:q.name,uid:q.uid||null,cpu:!!q.cpu,vp:fullVP(G,i),pub:pubVP(G,i),h:count(G,i,'h'),s:count(G,i,'s'),o:count(G,i,'o'),loot:q.loot||0,deeds:q.deeds||0,ord:q.ord||0,road:G.road===i,king:G.king===i,surv:G.surv===i,use:q.use||{}}))}}
 function apply0(G,seat,a){
   if(!a||typeof a!=='object'||G.phase==='over')return'今は操作できません';
   const p=G.pl[seat];if(!p)return'席がありません';const t=a.t;
@@ -466,11 +466,18 @@ function hoardTarget(G,o,lim=7){const p=G.pl[o];if(!p.cpu||(G.lv??1)<3||!behind(
   for(const k of['wild','charter']){if(!(G.stock[k]>0))continue;if(k==='wild'&&!legalWild(G,o).length)continue;if(k==='charter'&&!legalCharter(G,o).length)continue;
     const c=CARD[k].p,miss=RES.reduce((a,r)=>a+Math.max(0,(c[r]||0)-p.hand[r]),0);if(miss<=lim)return k}
   return null}
-function goalCost(G,o){{const h=hoardTarget(G,o);if(h)return CARD[h].p}if(legalFac(G,o).length&&count(G,o,'o')<LIMIT.fac&&count(G,o,'s')>=2)return COST.fac;if(legalSt(G,o).length&&count(G,o,'s')<LIMIT.st)return COST.st;if(legalHuts(G,o).length&&count(G,o,'h')<LIMIT.hut)return COST.hut;return COST.rail}
+function goalPick(G,o){const p=G.pl[o],c=[],late=Math.max(...G.pl.map((_,i)=>pubVP(G,i)))>=G.target*.6;
+  const miss=x=>KEYS.reduce((a,r)=>a+Math.max(0,(x[r]||0)-p.hand[r])*(r==='money'?.35:1),0);
+  if(legalFac(G,o).length&&count(G,o,'o')<LIMIT.fac)c.push({x:COST.fac,v:1.6});
+  if(legalSt(G,o).length&&count(G,o,'s')<LIMIT.st)c.push({x:COST.st,v:1.5});
+  if(legalHuts(G,o).length&&count(G,o,'h')<LIMIT.hut)c.push({x:COST.hut,v:1.3});
+  if(p.ord<LIMIT.ord)for(let k=0;k<5;k++)if(visit(G,o,k)&&G.orders[k])c.push({x:G.orders[k],v:late?1.2:.9});
+  if(!c.length)return null;return best(c,q=>q.v*(late?1:1)-miss(q.x)*.5).x}
+function goalCost(G,o){{const h=hoardTarget(G,o);if(h)return CARD[h].p}if(G.pl[o].cpu){const g=goalPick(G,o);if(g)return g}if(legalFac(G,o).length&&count(G,o,'o')<LIMIT.fac&&count(G,o,'s')>=2)return COST.fac;if(legalSt(G,o).length&&count(G,o,'s')<LIMIT.st)return COST.st;if(legalHuts(G,o).length&&count(G,o,'h')<LIMIT.hut)return COST.hut;return COST.rail}
 function cpuRespond(G,seat){const o=G.offer,p=G.pl[seat],L=p.cpu?(G.lv??1):2;if(!canPay(p,o.want))return{t:'respond',ok:false};
   const val=b=>KEYS.reduce((a,r)=>a+(b[r]||0)*(r==='money'?2:G.mk[r]),0),goal=goalCost(G,seat);
   const spare=RES.every(r=>!o.want[r]||p.hand[r]-o.want[r]>=(goal[r]||0));
-  const lead=pubVP(G,o.from)>=G.target-2;return{t:'respond',ok:spare&&!lead&&val(o.give)>=val(o.want)*[.7,1,1,1.3,1.6][L]}}
+  const lead=pubVP(G,o.from)>=G.target-4||pubVP(G,o.from)>pubVP(G,seat)+3;return{t:'respond',ok:spare&&!lead&&val(o.give)>=val(o.want)*[.7,1,1,1.3,1.6][L]}}
 function cpuAct(G,seat){
   const p=G.pl[seat],B=getB(),L=p.cpu?(G.lv??1):2;
   if(G.offer&&seat!==G.offer.from)return cpuRespond(G,seat);
@@ -485,19 +492,19 @@ function cpuAct(G,seat){
     return{t:'roll'}}
   if(G.bridge>0){const ls=legalLines(G,seat);if(ls.length)return{t:'line',k:'rail',e:lineChoice(G,seat,ls)};return{t:'end'}}
   if(p.mini<=G.turn)return{t:'mg',op:'auto',n:L>=2?9:L?[0,3,3,6,6,9][Math.floor(Math.random()*6)]:3};
-  if(Math.random()<[.45,.15,0,0,0][L])return{t:'end'};
+  if(Math.random()<[.3,.15,0,0,0][L])return{t:'end'};
   const ls=lines(G,seat)<LIMIT.line?legalLines(G,seat):[],hs=count(G,seat,'h')<LIMIT.hut?legalHuts(G,seat):[],hoard=G.n>2&&hoardTarget(G,seat,3);
   if(G.ap>0&&!hoard){
     if(canPay(p,COST.fac)&&legalFac(G,seat).length&&count(G,seat,'o')<LIMIT.fac)return{t:'fac',n:best(legalFac(G,seat),n=>nodeScore(G,n,seat))};
     if(canPay(p,COST.st)&&legalSt(G,seat).length&&count(G,seat,'s')<LIMIT.st)return{t:'st',n:best(legalSt(G,seat),n=>nodeScore(G,n,seat))};
     if(p.ord<LIMIT.ord)for(let k=0;k<5;k++)if(visit(G,seat,k)&&canPay(p,G.orders[k]))return{t:'deliver',k};
-    if(p.hand.money>=itemCost(p)&&p.boost.length<LIMIT.boost){const c=[];G.shop.forEach((s,k)=>{if(visit(G,seat,k))s.forEach(r=>{if(!p.boost.includes(r))c.push({k,r})})});
+    if(p.hand.money>=itemCost(p)&&p.boost.length<LIMIT.boost&&G.turn<8){const c=[];G.shop.forEach((s,k)=>{if(visit(G,seat,k))s.forEach(r=>{if(!p.boost.includes(r))c.push({k,r})})});
       if(c.length){const x=best(c,o=>{let v=Math.random();G.nodes.forEach((b,n)=>{if(b&&b.o===seat)B.NF[n].forEach(f=>{if(G.faces[f]===o.r)v+=YIELD[b.k]})});return v});return{t:'item',k:x.k,r:x.r}}}
     if(L&&canPay(p,COST.seize)&&count(G,seat,'h')<LIMIT.hut&&legalSeize(G,seat).length)return{t:'seize',n:best(legalSeize(G,seat),n=>nodeScore(G,n,seat))};
     if(L>=2&&(p.loot||0)<LOOT_MAX&&canPay(p,COST.take)&&lines(G,seat)<LIMIT.line&&legalTake(G,seat).length)return{t:'take',e:best(legalTake(G,seat),e=>{const o=G.edges[e];return Math.random()+(G.road===o?3:0)+pubVP(G,o)*.1})};
     if(canPay(p,COST.hut)&&hs.length)return{t:'hut',n:best(hs,n=>nodeScore(G,n,seat))};
     if(canPay(p,COST.take)&&p.hand.money>=4&&lines(G,seat)<LIMIT.line&&legalTake(G,seat).length)return{t:'take',e:best(legalTake(G,seat),()=>Math.random())};
-    if(ls.length&&(!hs.length||lines(G,seat)<5)){if(canPay(p,COST.rail)&&p.hand.iron>=2&&p.hand.stone>=2)return{t:'line',k:'rail',e:lineChoice(G,seat,ls)};if(canPay(p,COST.dirt))return{t:'line',k:'dirt',e:lineChoice(G,seat,ls)}}
+    if(ls.length&&(!hs.length||lines(G,seat)<8)){if(canPay(p,COST.rail)&&p.hand.iron>=2&&p.hand.stone>=2)return{t:'line',k:'rail',e:lineChoice(G,seat,ls)};if(canPay(p,COST.dirt))return{t:'line',k:'dirt',e:lineChoice(G,seat,ls)}}
     if(p.hand.coal>=3&&legalUpg(G,seat).length)return{t:'upg',e:legalUpg(G,seat)[0]}}
   if(!G.played&&usable.some(c=>c.k==='wild')&&legalWild(G,seat).length)return{t:'play',k:'wild',n:best(legalWild(G,seat),n=>(G.nodes[n].k==='o'?3:1)+pubVP(G,G.nodes[n].o)*.3+(L>=3&&!G.pl[G.nodes[n].o].cpu?5:0)+Math.random()*.1)};
   if(!G.played&&usable.some(c=>c.k==='fire')&&legalFire(G,seat).length)return{t:'play',k:'fire',n:best(legalFire(G,seat),n=>pubVP(G,G.nodes[n].o)+(L>=3&&!G.pl[G.nodes[n].o].cpu?5:0)+Math.random()*.1)};
@@ -512,12 +519,13 @@ function cpuAct(G,seat){
   if(L){const val=b=>KEYS.reduce((a,r)=>a+(b[r]||0)*(r==='money'?2:G.mk[r]),0);
     for(let i=0;i<G.n;i++){const q=G.pl[i],o=q.post;if(i===seat||!o||!canPay(q,o.give)||!canPay(p,o.want)||pubVP(G,i)>=G.target-2)continue;
       if(miss.some(r=>o.give[r])&&KEYS.every(r=>!o.want[r]||p.hand[r]-o.want[r]>=(goal[r]||0))&&val(o.give)>=val(o.want))return{t:'accept',s:i}}}
+  if(L&&miss.length&&G.offers<2){const sp=RES.filter(r=>p.hand[r]-(goal[r]||0)>=1);if(sp.length)return{t:'offer',give:{[best(sp,r=>p.hand[r]-(goal[r]||0)+Math.random()*.1)]:1},want:{[miss[0]]:1}}}
   if(G.mops<5){
     {const mb=miss.filter(r=>!(G.emb&&G.emb.r===r&&G.emb.by!==seat));if(mb.length&&p.hand.money>=G.mk[mb[0]]+(goal.money||0))return{t:'mbuy',r:mb[0]}}
     const sp=RES.filter(r=>p.hand[r]-(goal[r]||0)>=2);if(sp.length&&(miss.length||handN(p)>=10))return{t:'msell',r:best(sp,r=>G.mk[r]+p.hand[r]*.2)}}
   if(!hoard&&canPay(p,COST.deed)&&p.deeds<LIMIT.deed&&!(goal.money&&!miss.length))return{t:'deed'};
   {const sk=['charter','wild','fire','embargo','shuffle'].find(k=>canMakeSp(G,seat,k));if(sk)return{t:'spmake',k:sk}}
-  if(canPay(p,COST.card)&&G.deck.length&&!miss.length&&p.hand.money>=5)return{t:'buy'};
+  if(canPay(p,COST.card)&&G.deck.length&&p.hand.money>=4&&handN(p)>=6)return{t:'buy'};
   if(L&&p.pt!==G.tick&&miss.length){const sp=RES.filter(r=>p.hand[r]-(goal[r]||0)>=1);if(sp.length)return{t:'post',give:{[best(sp,r=>p.hand[r])]:1},want:{[miss[0]]:1}}}
   return{t:'end'}}
 function lineChoice(G,o,ls){const B=getB();return best(ls,e=>{let v=Math.random()*.2;B.edges[e].forEach(n=>{if(!B.dead[n]&&!G.nodes[n]&&B.NN[n].every(m=>!G.nodes[m]))v+=nodeScore(G,n,o)});return v})}
@@ -729,7 +737,7 @@ function diceFx(){if(!G||UI.screen!=='game')return;const k=G.dA!==null?G.tick:nu
     if(el&&G&&G.dA!==null){const f=diceFaces(G,on);el.querySelectorAll('b').forEach((b,i)=>{b.textContent=f[i]})}
     if(!on){clearInterval(UI.dt);el?.classList.remove('rolling');soft()}},80)}
 function render(){
-  if(SRV&&NET.local&&G&&G.phase==='over'&&!G.sent){G.sent=1;try{fetch('/api/game',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({rec:gameRecord(G)})}).catch(()=>{})}catch(e){}}
+  if(SRV&&NET.local&&G&&G.phase==='over'&&!G.sent){G.sent=1;try{const ac=window.claude.account;if(ac&&ac.sendGame)ac.sendGame(gameRecord(G)).catch(()=>{})}catch(e){}}
   diceFx();if(G&&UI.iq!==G.seq){UI.iq=G.seq;UI.idle0=Date.now()}$('app').innerHTML=UI.screen==='game'&&G?gameView():UI.screen==='lobby'?lobbyView():UI.screen==='rules'?rulesView():titleView();
   miniDraw();const sc=!!G&&UI.screen==='game'&&G.phase==='block'&&seatOf()===G.cur;if(sc&&!UI.sc)toBoard();UI.sc=sc}
 function toBoard(){if(window.innerWidth<=820)document.querySelector('.board')?.scrollIntoView({behavior:'smooth',block:'start'})}
