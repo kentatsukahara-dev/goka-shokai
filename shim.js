@@ -55,6 +55,8 @@
     verify: async (email, code) => { saveTok(await post('/api/auth/verify', { email, code })); location.reload(); },
     logout: () => { saveTok(null); location.reload(); },
     setName: async name => post('/api/profile', { name }, await freshToken()),
+    sendGame: async rec => post('/api/game', { rec }, await freshToken()),
+    games: async () => { const r = await fetch('/api/games', { headers: { authorization: 'Bearer ' + (await freshToken() || '') } }); return r.json(); },
     avatar: async file => { const image = await shrink(file); return post('/api/avatar', { image }, await freshToken()); },
   });
 
