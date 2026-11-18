@@ -13,10 +13,12 @@ const ROOT = __dirname;
 const DATA_DIR = process.env.DATA_DIR || path.join(ROOT, 'data');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
 const HTML = fs.readFileSync(path.join(ROOT, 'seigokaku.html'), 'utf8');
+const HTML_EN = fs.existsSync(path.join(ROOT, 'seigokaku.en.html')) ? fs.readFileSync(path.join(ROOT, 'seigokaku.en.html'), 'utf8') : null;
 const MAX_EMIT = 4 * 1024, MAX_TABLES = 300, AWAY_MS = 120000;
 
-const engineSrc = /<script id="engine">([\s\S]*?)<\/script>/.exec(HTML)[1];
-const E = new Function(engineSrc + '\nreturn{newGame,apply,cpuAct,viewFor,waitSeats,log,IDLE_MS,gameRecord};')();
+const loadEngine = h => new Function(/<script id="engine">([\s\S]*?)<\/script>/.exec(h)[1] + '\nreturn{newGame,apply,cpuAct,viewFor,waitSeats,log,IDLE_MS,gameRecord};')();
+const E = loadEngine(HTML), E_EN = HTML_EN ? loadEngine(HTML_EN) : E;
+const eng = t => (t && t.lang === 'en' ? E_EN : E);   // 英語の部屋は英語のルール文で動かす
 
 // ---------- アカウント（Supabase）とアバター（xAI） ----------
 // 環境変数が無いときは、今までどおりログインなしで動く
@@ -62,7 +64,7 @@ const STATS_EMAILS = (process.env.STATS_EMAILS || 'company@bildram.com').toLower
 function cleanRec(r, src, soloAcct) {
   if (!isObj(r) || !Array.isArray(r.pl) || r.pl.length < 2 || r.pl.length > 5) return null;
   const use = u => { const o = {}; if (isObj(u)) for (const [k, v] of Object.entries(u).slice(0, 40)) if (/^[a-z:]{1,20}$/.test(k)) o[k] = num(v, 0, 9999); return o; };
-  return { at: new Date().toISOString(), src, n: r.pl.length, target: num(r.target, 0, 99), lv: num(r.lv, 0, 4), turn: num(r.turn, 0, 9999), winner: num(r.winner, -1, 4),
+  return { at: new Date().toISOString(), src, lang: r.lang === 'en' ? 'en' : 'ja', n: r.pl.length, target: num(r.target, 0, 99), lv: num(r.lv, 0, 4), turn: num(r.turn, 0, 9999), winner: num(r.winner, -1, 4),
     pl: r.pl.map(q => ({ name: cleanName(q && q.name), email: q && !q.cpu ? (soloAcct ? soloAcct.email : (q.uid && emailOf.get(String(q.uid))) || '') : '', cpu: !!(q && q.cpu), vp: num(q && q.vp, 0, 99), pub: num(q && q.pub, 0, 99), h: num(q && q.h, 0, 99), s: num(q && q.s, 0, 99), o: num(q && q.o, 0, 99), loot: num(q && q.loot, 0, 9), deeds: num(q && q.deeds, 0, 99), ord: num(q && q.ord, 0, 99), road: !!(q && q.road), king: !!(q && q.king), surv: !!(q && q.surv), use: use(q && q.use) })) };
 }
 let gamesCache = null;
@@ -239,7 +241,7 @@ const clients = new Set();
 function seen(c, t) {   // 席ごとに見せてよい形へ
   if (!t.G) return t;
   const seat = t.G.pl.findIndex(p => p.uid === c.uid);
-  return { ...t, G: E.viewFor(t.G, seat) };
+  return { ...t, G: eng(t).viewFor(t.G, seat) };
 }
 const docSnap = (c, p) => {
   if (!docs.has(p)) return { exists: false, data: null };
@@ -290,7 +292,7 @@ function afterMove(t) {
       const n = t.G.n, k = 'stats/n' + n, x = docs.get(k) || { n, games: 0, wins: new Array(n).fill(0) };
       x.games++; x.wins[t.G.winner]++; docs.set(k, x); changed(k);
     }
-    try { saveGame(cleanRec(E.gameRecord(t.G), 'online')).catch(e => console.log('game save', e.message)); } catch (e) { console.log('game rec', e.message); }
+    try { saveGame(cleanRec({ ...E.gameRecord(t.G), lang: t.lang }, 'online')).catch(e => console.log('game save', e.message)); } catch (e) { console.log('game rec', e.message); }
   }
   touch(t);
 }
@@ -299,24 +301,24 @@ function onAct(c, code, d) {
   if (!t || !isObj(d)) return;
   if (d.sit !== undefined) {
     if (t.status !== 'wait' || t.seats.length >= t.size || t.seats.some(s => s.uid === c.uid)) return;
-    if (AUTH && !c.acct) return;
+    if (AUTH && !c.acct && t.lang !== 'en') return;
     t.seats.push({ uid: c.uid, name: cleanName(d.sit), av: c.acct ? c.acct.av : '' }); touch(t); return;
   }
   if (d.start) {
     if (t.status !== 'wait' || !t.seats[0] || t.seats[0].uid !== c.uid) return;
     const seats = t.seats.map(s => ({ ...s }));
     while (seats.length < t.size) seats.push({ name: 'CPU' + (seats.length + 1), cpu: true });
-    t.G = E.newGame({ seats, target: t.target, map: 1 }); t.status = 'play'; touch(t); return;
+    t.G = eng(t).newGame({ seats, target: t.target, map: 1 }); t.status = 'play'; touch(t); return;
   }
   if (!t.G || !isObj(d.a)) return;
   const seat = t.G.pl.findIndex(p => p.uid === c.uid);   // 席は接続の本人から決める
   if (seat < 0 || (d.a.t === 'mg' && d.a.op === 'auto')) return;
   const L = liveOf(code), me = t.G.pl[seat];
   L.act[c.uid] = Date.now();   // 画面に触っている間は離席にしない
-  if (me.afk) { me.afk = false; E.log(t.G, `${me.name}が戻った`); touch(t); }
+  if (me.afk) { me.afk = false; E.log(t.G, t.lang === 'en' ? `${me.name} is back` : `${me.name}が戻った`); touch(t); }
   if (d.a.t === 'ping') return;
   if (typeof d.aid === 'string') { if (L.done.has(d.aid)) return; L.done.add(d.aid); if (L.done.size > 500) L.done.clear(); }
-  if (!E.apply(t.G, seat, d.a)) afterMove(t);
+  if (!eng(t).apply(t.G, seat, d.a)) afterMove(t);
 }
 function tickTable(t) {
   const G = t.G, L = liveOf(t.id), now = Date.now();
@@ -326,7 +328,7 @@ function tickTable(t) {
   for (const i of E.waitSeats(G)) {   // つながっていても操作が止まった人は離席にする
     const p = G.pl[i];
     if (p.uid && !p.cpu && !p.afk && on.has(p.uid) && now - Math.max(L.mark || L.since, L.act[p.uid] || 0) > E.IDLE_MS) {
-      p.afk = true; E.log(G, `${p.name}は操作が止まり離席になった`); touch(t);
+      p.afk = true; E.log(G, t.lang === 'en' ? `${p.name} went idle and is now away` : `${p.name}は操作が止まり離席になった`); touch(t);
     }
   }
   const auto = i => { const p = G.pl[i]; return p.cpu || p.afk || (!on.has(p.uid) && now - (L.seen[p.uid] || L.since) > AWAY_MS); };
@@ -336,8 +338,8 @@ function tickTable(t) {
     s = w.find(auto); if (s === undefined) s = auto(G.offer.from) ? G.offer.from : null;
   } else if (auto(G.cur)) s = G.cur;
   if (s === null || s === undefined) return;
-  const a = E.cpuAct(G, s), e = E.apply(G, s, a);
-  if (e && s === G.cur && !G.offer) E.apply(G, s, G.phase === 'roll' ? { t: 'roll' } : { t: 'end' });
+  const X = eng(t), a = X.cpuAct(G, s), e = X.apply(G, s, a);
+  if (e && s === G.cur && !G.offer) X.apply(G, s, G.phase === 'roll' ? { t: 'roll' } : { t: 'end' });
   L.nextCpu = now + (a.t === 'respond' ? 300 : a.t === 'roll' || a.k === 'forecast' ? 1500 : 750);
   afterMove(t);
 }
@@ -360,10 +362,10 @@ function createTable(c, p, d) {
   let n = 0; for (const k of docs.keys()) if (k.startsWith('tables/')) n++;
   if (n >= MAX_TABLES) return 'full';
   const size = [2, 3, 4, 5].includes(d.size) ? d.size : 4, target = [16, 20, 24].includes(d.target) ? d.target : 20;
-  if (AUTH && !c.acct) return 'login';
+  if (AUTH && !c.acct && d.lang !== 'en') return 'login';   // 英語版の部屋はログインなし
   const name = cleanName(d.seats && d.seats[0] && d.seats[0].name);
   c.lastTable = Date.now();
-  docs.set(p, { id, status: 'wait', seats: [{ uid: c.uid, name, av: c.acct ? c.acct.av : '' }], size, map: 1, target, created: Date.now(), updated: Date.now(), rev: 1 });
+  docs.set(p, { id, status: 'wait', ...(d.lang === 'en' ? { lang: 'en' } : {}), seats: [{ uid: c.uid, name, av: c.acct ? c.acct.av : '' }], size, map: 1, target, created: Date.now(), updated: Date.now(), rev: 1 });
   changed(p); return null;
 }
 function handle(c, m) {
@@ -435,15 +437,16 @@ function handle(c, m) {
 }
 
 // ---------- HTTP ----------
-function page() {
-  return '<!doctype html><html lang="ja"><head><meta charset="utf-8">' +
+function page(en) {
+  return '<!doctype html><html lang="' + (en ? 'en' : 'ja') + '"><head><meta charset="utf-8">' +
     '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">' +
     '<style>*,*::before,*::after{box-sizing:border-box}body{margin:0}</style>' +
-    '<script src="/shim.js"></script></head><body>' + HTML + '</body></html>';
+    '<script src="/shim.js"></script></head><body>' + (en ? HTML_EN : HTML) + '</body></html>';
 }
 const server = http.createServer((req, res) => {
   const url = req.url.split('?')[0];
   try {
+    if ((url === '/en' || url === '/en/') && HTML_EN) { res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-cache' }); return res.end(page(true)); }
     if (url === '/' || url === '/index.html') { res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-cache' }); return res.end(page()); }
     if (url === '/shim.js') { res.writeHead(200, { 'content-type': 'text/javascript; charset=utf-8', 'cache-control': 'no-cache' }); return res.end(fs.readFileSync(path.join(ROOT, 'shim.js'))); }
     if (url === '/healthz') { res.writeHead(200, { 'content-type': 'text/plain' }); return res.end('ok'); }
