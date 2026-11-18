@@ -237,7 +237,7 @@ function newGame(cfg){
   const mk={};RES.forEach(r=>{mk[r]=3});
   const slots=shuffle([...RES,...shuffle(RES.slice()).slice(0,2)]),shop=[0,1,2,3,4].map(k=>[...new Set([slots[2*k],slots[2*k+1]])]),orders=[0,1,2,3,4].map(newOrder);
   return{seq:0,n,map,target:cfg.target||20,faces,nums,shop,orders,ap:AP,lv:cfg.lv??1,king:null,road:null,surv:null,dC:null,dD:null,dE:null,ek:new Array(B.edges.length).fill(0),block:null,nodes:new Array(B.nodes.length).fill(null),edges:new Array(B.edges.length).fill(null),
-    mk,dA:null,dB:null,cur:order[0],phase:'setup',order,oi:0,step:'hut',lastHut:null,tick:0,turn:1,played:false,offers:0,bridge:0,mops:0,back:null,offer:null,deck,stock,winner:null,log:['地図が広げられました。駅を置く場所を選びましょう'],
+    mk,dA:null,dB:null,cur:order[0],phase:'setup',order,oi:0,step:'hut',lastHut:null,tick:0,turn:1,played:false,offers:0,bridge:0,mops:0,back:null,offer:null,deck,stock,winner:null,log:['地図が広げられました。小屋を置く場所を選びましょう'],
     pl:seats.map(s=>({name:s.name,uid:s.uid||null,cpu:!!s.cpu,me:!!s.me,mg:null,deeds:0,boost:[],ord:0,mini:1,hand:{wood:0,stone:0,iron:0,coal:0,cotton:0,food:0,copper:0,salt:0,money:4},cards:[]}))}}
 const count=(G,o,k)=>G.nodes.filter(x=>x&&x.o===o&&x.k===k).length;
 const legalCharter=(G,o)=>G.nodes.map((b,n)=>b&&b.o!==o&&((b.k==='s'&&count(G,o,'s')<LIMIT.st)||(b.k==='h'&&count(G,o,'h')<LIMIT.hut))?n:-1).filter(n=>n>=0);
@@ -535,6 +535,7 @@ function lineChoice(G,o,ls){const B=getB();return best(ls,e=>{let v=Math.random(
 
 <script id="ui">
 'use strict';
+const LANG='ja';
 /* ===== 画面とオンライン ===== */
 const PC=['var(--p0)','var(--p1)','var(--p2)','var(--p3)','var(--p4)'];
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -585,7 +586,7 @@ async function boot(hot){
     const m=/^#t-([a-z0-9]{5})(?:-(p\d))?$/.exec(location.hash||'');
     NET.pid=NET.uid+(!SRV&&m&&m[2]?'~'+m[2]:'');
     db.collection('stats').onSnapshot(s=>{s.docs.forEach(d=>{const x=d.data();if(x&&x.n)NET.stats[x.n]=x});soft()},()=>{});
-    db.collection('tables').where('status','==','wait').limit(30).onSnapshot(s=>{const cut=Date.now()-6*3600e3;NET.open=s.docs.map(d=>d.data()).filter(t=>t&&t.created>cut);soft()},()=>{});
+    db.collection('tables').where('status','==','wait').limit(30).onSnapshot(s=>{const cut=Date.now()-6*3600e3;NET.open=s.docs.map(d=>d.data()).filter(t=>t&&t.created>cut&&(t.lang==='en')===(LANG==='en'));soft()},()=>{});
     const code=m?m[1]:ls.get('goka.table');
     if(code&&!G)resume(code,!!m)}
   render()}
@@ -600,7 +601,7 @@ function needName(){const n=UI.name.trim().slice(0,10);if(!n){UI.msg='先に名�
 async function createTable(){
   const name=needName();if(!name||!NET.db)return;
   const al='abcdefghjkmnpqrstuvwxyz23456789';let id='';for(let i=0;i<5;i++)id+=al[Math.floor(Math.random()*al.length)];
-  const t={id,status:'wait',seats:[{uid:NET.pid,name}],size:UI.size,map:UI.map,target:UI.target,created:Date.now(),updated:Date.now()};
+  const t={id,status:'wait',lang:LANG,seats:[{uid:NET.pid,name}],size:UI.size,map:UI.map,target:UI.target,created:Date.now(),updated:Date.now()};
   try{await NET.db.doc('tables/'+id).set(t);await enter(id)}catch(e){UI.msg='部屋を作れませんでした（'+(e&&e.code||'error')+'）。このページの共有設定を確認してください';render()}}
 async function join(code){
   const name=needName();if(!name||!NET.db)return;code=String(code||'').trim().toLowerCase();
@@ -737,7 +738,7 @@ function diceFx(){if(!G||UI.screen!=='game')return;const k=G.dA!==null?G.tick:nu
     if(el&&G&&G.dA!==null){const f=diceFaces(G,on);el.querySelectorAll('b').forEach((b,i)=>{b.textContent=f[i]})}
     if(!on){clearInterval(UI.dt);el?.classList.remove('rolling');soft()}},80)}
 function render(){
-  if(SRV&&NET.local&&G&&G.phase==='over'&&!G.sent){G.sent=1;try{const ac=window.claude.account;if(ac&&ac.sendGame)ac.sendGame(gameRecord(G)).catch(()=>{})}catch(e){}}
+  if(SRV&&NET.local&&G&&G.phase==='over'&&!G.sent){G.sent=1;try{const ac=window.claude.account;if(ac&&ac.sendGame)ac.sendGame({...gameRecord(G),lang:LANG}).catch(()=>{})}catch(e){}}
   diceFx();if(G&&UI.iq!==G.seq){UI.iq=G.seq;UI.idle0=Date.now()}$('app').innerHTML=UI.screen==='game'&&G?gameView():UI.screen==='lobby'?lobbyView():UI.screen==='rules'?rulesView():titleView();
   miniDraw();const sc=!!G&&UI.screen==='game'&&G.phase==='block'&&seatOf()===G.cur;if(sc&&!UI.sc)toBoard();UI.sc=sc}
 function toBoard(){if(window.innerWidth<=820)document.querySelector('.board')?.scrollIntoView({behavior:'smooth',block:'start'})}
