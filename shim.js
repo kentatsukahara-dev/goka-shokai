@@ -20,6 +20,8 @@
   const adminKey = ls.get(ADMIN_KEY) || '';
 
   // ---------- ログイン（メールのコード、またはメールのリンク） ----------
+  // 英語版（/en）はログインなしで遊ぶ
+  const NO_LOGIN = document.documentElement.lang === 'en';
   const AUTH_KEY = 'goka.auth';
   let tok = null;
   try { tok = JSON.parse(ls.get(AUTH_KEY) || 'null'); } catch (e) {}
@@ -50,7 +52,7 @@
     return cv.toDataURL('image/jpeg', 0.86);
   }
   const account = Object.freeze({
-    info: () => helloInfo ? { on: !!helloInfo.auth, avatarOn: !!helloInfo.avatarOn, acct: helloInfo.acct || null } : { on: false, avatarOn: false, acct: null },
+    info: () => NO_LOGIN ? { on: false, avatarOn: false, acct: null } : helloInfo ? { on: !!helloInfo.auth, avatarOn: !!helloInfo.avatarOn, acct: helloInfo.acct || null } : { on: false, avatarOn: false, acct: null },
     start: email => post('/api/auth/start', { email }),
     verify: async (email, code) => { saveTok(await post('/api/auth/verify', { email, code })); location.reload(); },
     logout: () => { saveTok(null); location.reload(); },
@@ -102,7 +104,7 @@
       }
     };
   }
-  function hello() { if (ws && ws.readyState === 1) ws.send(JSON.stringify({ op: 'hello', id: 'hello', uid: ident.uid, secret: ident.secret, admin: adminKey, token: tok ? tok.a : undefined })); }
+  function hello() { if (ws && ws.readyState === 1) ws.send(JSON.stringify({ op: 'hello', id: 'hello', uid: ident.uid, secret: ident.secret, admin: adminKey, token: tok && !NO_LOGIN ? tok.a : undefined })); }
   function onHello(m) {
     if (!m.ok) { if (m.err === 'bad_secret' || m.err === 'bad_identity') { newIdent(); hello(); } return; }
     helloInfo = m.data;
