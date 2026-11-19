@@ -58,6 +58,7 @@
     logout: () => { saveTok(null); location.reload(); },
     setName: async name => post('/api/profile', { name }, await freshToken()),
     sendGame: async rec => post('/api/game', { rec }, await freshToken()),
+    visits: async () => { const r = await fetch('/api/visits', { headers: { authorization: 'Bearer ' + (await freshToken() || '') } }); return r.json(); },
     games: async () => { const r = await fetch('/api/games', { headers: { authorization: 'Bearer ' + (await freshToken() || '') } }); return r.json(); },
     avatar: async file => { const image = await shrink(file); return post('/api/avatar', { image }, await freshToken()); },
   });
@@ -104,7 +105,7 @@
       }
     };
   }
-  function hello() { if (ws && ws.readyState === 1) ws.send(JSON.stringify({ op: 'hello', id: 'hello', uid: ident.uid, secret: ident.secret, admin: adminKey, token: tok && !NO_LOGIN ? tok.a : undefined })); }
+  function hello() { if (ws && ws.readyState === 1) ws.send(JSON.stringify({ op: 'hello', id: 'hello', uid: ident.uid, secret: ident.secret, admin: adminKey, token: tok && !NO_LOGIN ? tok.a : undefined, lang: NO_LOGIN ? 'en' : 'ja' })); }
   function onHello(m) {
     if (!m.ok) { if (m.err === 'bad_secret' || m.err === 'bad_identity') { newIdent(); hello(); } return; }
     helloInfo = m.data;
