@@ -86,6 +86,7 @@ label{display:grid;gap:4px;font-size:13px;color:var(--mute)}
 .tbl table{border-collapse:collapse;width:100%;font-size:14px}
 .tbl td,.tbl th{border-bottom:1px solid var(--sea3);padding:5px 8px;text-align:left}
 .over{position:fixed;inset:0;background:rgba(7,14,11,.86);display:grid;place-items:center;z-index:20;padding:16px}
+.tag{display:inline-block;padding:2px 8px;margin:2px;border-radius:10px;background:rgba(255,255,255,.1);font-size:.85em}
 .over>div{background:var(--sea2);border:1px solid var(--brass);border-radius:8px;padding:20px;max-width:420px;width:100%;display:grid;gap:10px}
 .over h2{color:var(--brass);font-size:26px}
 .track{position:relative;height:44px;background:var(--sea);border:1px solid var(--line);border-radius:6px;overflow:hidden}
@@ -169,10 +170,12 @@ function pole(poly){
   let cx=x0,cy=y0,best=-1e9;for(let i=1;i<24;i++)for(let j=1;j<24;j++){const x=x0+(x1-x0)*i/24,y=y0+(y1-y0)*j/24,d=dist(x,y);if(d>best){best=d;cx=x;cy=y}}
   return{cx,cy,inr:best}}
 /* 正五角形の盤面。三角形の網の「頂点」がマス、「三角形」が駅の置き場なので、どの置き場もちょうど3マスに触れる */
-const CN=4,STAR_R=480;
-let BOARD=null;
+/* 盤面の大きさ：ふつうは4段、短時間モードは3段（小さい盤面）。B_CN は対局ごとに切り替える */
+const CN=4,CN_QUICK=3,STAR_R=480,BOARDS={};
+let B_CN=CN;
+const useB=G=>{B_CN=G&&G.cn||CN};
 function getB(){
-  if(BOARD)return BOARD;
+  if(BOARDS[B_CN])return BOARDS[B_CN];const CN=B_CN;
   const R=STAR_R,pol=(q,a)=>[q*Math.cos(a),q*Math.sin(a)],D=Math.PI/180;
   const T=[];for(let k=0;k<5;k++)T.push(pol(R,(-90+72*k)*D));
   const lerp=(p,q,t)=>[p[0]+(q[0]-p[0])*t,p[1]+(q[1]-p[1])*t];
@@ -212,7 +215,7 @@ function getB(){
   const NE=nodes.map(()=>[]),NF=nodes.map((_,n)=>n<tris.length?tris[n].slice():[]),NN=nodes.map(()=>[]);
   edges.forEach(([a,b],e)=>{NE[a].push(e);NE[b].push(e);NN[a].push(b);NN[b].push(a)});
   const adj=adjS.map(s=>[...s]);
-  return BOARD={nodes,edges,faces,NE,NF,NN,adj,dead,star:T,towns:T.map((t,k)=>{const f=verts.findIndex(p=>Math.hypot(p[0]-t[0],p[1]-t[1])<1);return{x:t[0],y:t[1],f,spots:[...faces[f].v,cor[k]]}})}}
+  return BOARDS[CN]={nodes,edges,faces,NE,NF,NN,adj,dead,star:T,towns:T.map((t,k)=>{const f=verts.findIndex(p=>Math.hypot(p[0]-t[0],p[1]-t[1])<1);return{x:t[0],y:t[1],f,spots:[...faces[f].v,cor[k]]}})}}
 const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
 function makeFaces(B){
   const out=B.faces.map(f=>f.waste?'waste':null),ids=B.faces.map((f,i)=>f.waste?-1:i).filter(i=>i>=0);
@@ -230,15 +233,17 @@ function makeFaces(B){
   RES.forEach(r=>{const s=[0,0,0,0,0,0];shuffle(ids.filter(i=>out[i]===r)).sort((a,b)=>B.faces[b].c-B.faces[a].c).forEach(i=>{const o=shuffle([0,1,2,3,4,5]).sort((x,y)=>s[x]-s[y])[0];nums[i]=o+1;s[o]+=B.faces[i].c})});
   return{faces:out,nums}}
 const newOrder=()=>{const[a,b]=shuffle(RES.slice());return{[a]:2,[b]:2}};
+/* 短時間モード：勝利点8で盤面も小さい。全員が物資とお金を多めに持って始め、ミニゲームの間隔も短い */
+const QUICK=8,QUICK_HAND=1,QUICK_MONEY=8,QUICK_GAP=4;
 function newGame(cfg){
-  const seats=shuffle(cfg.seats.slice()),n=seats.length,map=1,B=getB(),deck=[],stock={};
+  const cn=cfg.target===QUICK?CN_QUICK:CN;B_CN=cn;const seats=shuffle(cfg.seats.slice()),n=seats.length,map=1,B=getB(),deck=[],stock={};
   Object.keys(CARD).forEach(k=>{if(CARD[k].sp)stock[k]=CARD[k].c;else for(let i=0;i<CARD[k].c;i++)deck.push(k)});shuffle(deck);
   const {faces,nums}=makeFaces(B),order=[];for(let i=0;i<n;i++)order.push(i);for(let i=n-1;i>=0;i--)order.push(i);
   const mk={};RES.forEach(r=>{mk[r]=3});
   const slots=shuffle([...RES,...shuffle(RES.slice()).slice(0,2)]),shop=[0,1,2,3,4].map(k=>[...new Set([slots[2*k],slots[2*k+1]])]),orders=[0,1,2,3,4].map(newOrder);
-  return{seq:0,n,map,target:cfg.target||20,faces,nums,shop,orders,ap:AP,lv:cfg.lv??1,king:null,road:null,surv:null,dC:null,dD:null,dE:null,ek:new Array(B.edges.length).fill(0),block:null,nodes:new Array(B.nodes.length).fill(null),edges:new Array(B.edges.length).fill(null),
+  return{seq:0,n,map,cn,target:cfg.target||20,faces,nums,shop,orders,ap:AP,lv:cfg.lv??1,king:null,road:null,surv:null,dC:null,dD:null,dE:null,ek:new Array(B.edges.length).fill(0),block:null,nodes:new Array(B.nodes.length).fill(null),edges:new Array(B.edges.length).fill(null),
     mk,dA:null,dB:null,cur:order[0],phase:'setup',order,oi:0,step:'hut',lastHut:null,tick:0,turn:1,played:false,offers:0,bridge:0,mops:0,back:null,offer:null,deck,stock,winner:null,log:['地図が広げられました。小屋を置く場所を選びましょう'],
-    pl:seats.map(s=>({name:s.name,uid:s.uid||null,cpu:!!s.cpu,me:!!s.me,mg:null,deeds:0,boost:[],ord:0,mini:1,hand:{wood:0,stone:0,iron:0,coal:0,cotton:0,food:0,copper:0,salt:0,money:4},cards:[]}))}}
+    pl:seats.map(s=>({name:s.name,uid:s.uid||null,cpu:!!s.cpu,me:!!s.me,mg:null,deeds:0,boost:[],ord:0,mini:1,hand:cfg.target===QUICK?{wood:QUICK_HAND,stone:QUICK_HAND,iron:QUICK_HAND,coal:QUICK_HAND,cotton:QUICK_HAND,food:QUICK_HAND,copper:QUICK_HAND,salt:QUICK_HAND,money:QUICK_MONEY}:{wood:0,stone:0,iron:0,coal:0,cotton:0,food:0,copper:0,salt:0,money:4},cards:[]}))}}
 const count=(G,o,k)=>G.nodes.filter(x=>x&&x.o===o&&x.k===k).length;
 const legalCharter=(G,o)=>G.nodes.map((b,n)=>b&&b.o!==o&&((b.k==='s'&&count(G,o,'s')<LIMIT.st)||(b.k==='h'&&count(G,o,'h')<LIMIT.hut))?n:-1).filter(n=>n>=0);
 const legalFire=(G,o)=>G.nodes.map((b,n)=>b&&b.o!==o&&b.k==='s'&&count(G,b.o,'h')<LIMIT.hut?n:-1).filter(n=>n>=0);
@@ -262,7 +267,7 @@ function loot(G,p){if((p.loot||0)>=LOOT_MAX)return;p.loot=(p.loot||0)+1;log(G,`$
 const fullVP=(G,o)=>pubVP(G,o)+secretN(G,o);
 const log=(G,m)=>{G.log.push(m);if(G.log.length>60)G.log.shift()};
 /* 操作が止まったら離席にする時間と、いま操作を待たれている席 */
-const IDLE_MS=120000,waitSeats=G=>G.phase==='over'?[]:G.offer?G.pl.map((_,i)=>i).filter(i=>i!==G.offer.from&&!G.offer.no.includes(i)):[G.cur];
+const IDLE_MS=120000,waitSeats=G=>G.phase==='over'?[]:G.ev?evWait(G):G.offer?G.pl.map((_,i)=>i).filter(i=>i!==G.offer.from&&!G.offer.no.includes(i)):[G.cur];
 const bagTxt=b=>KEYS.filter(r=>b[r]).map(r=>RN[r]+b[r]).join('・');
 const blocked=(G,f)=>G.block===f;
 const sellP=(G,r)=>Math.max(1,Math.floor(G.mk[r]/2));
@@ -312,7 +317,7 @@ function cleanBag(b){const o={};let t=0;if(b&&typeof b==='object')KEYS.forEach(r
 function doTrade(G,f,p,give,want){pay(f,give);gain(f,want);pay(p,want);gain(p,give);log(G,`${f.name}と${p.name}が取引した（${bagTxt(give)} ⇄ ${bagTxt(want)}）`);
   if(G.tb)return;G.tb=true;[f,p].forEach(q=>{q.hand.money++;q.tr=(q.tr||0)+1;const i=G.pl.indexOf(q);if(q.tr>=KING_MIN&&G.king!==i&&(G.king===null||q.tr>(G.pl[G.king].tr||0))){G.king=i;log(G,`${q.name}が取引王になった（+${KING}点）`)}})}
 const USE_T=['hut','st','fac','upg','line','take','seize','buy','mbuy','msell','offer','accept','deed','deliver','block','item','mg'];
-function apply(G,seat,a){const e=apply0(G,seat,a),p=G.pl[seat];if(!e&&p&&a){const k=a.t==='play'||a.t==='spmake'?a.t+':'+a.k:USE_T.includes(a.t)?a.t:null;if(k){const u=p.use||(p.use={});u[k]=(u[k]||0)+1}}return e}
+function apply(G,seat,a){useB(G);const e=apply0(G,seat,a),p=G.pl[seat];if(!e&&p&&a){const k=a.t==='play'||a.t==='spmake'?a.t+':'+a.k:USE_T.includes(a.t)?a.t:null;if(k){const u=p.use||(p.use={});u[k]=(u[k]||0)+1}}return e}
 function gameRecord(G){return{n:G.n,target:G.target,lv:G.lv??1,turn:G.turn,winner:G.winner,pl:G.pl.map((q,i)=>({name:q.name,uid:q.uid||null,cpu:!!q.cpu,vp:fullVP(G,i),pub:pubVP(G,i),h:count(G,i,'h'),s:count(G,i,'s'),o:count(G,i,'o'),loot:q.loot||0,deeds:q.deeds||0,ord:q.ord||0,road:G.road===i,king:G.king===i,surv:G.surv===i,use:q.use||{}}))}}
 function apply0(G,seat,a){
   if(!a||typeof a!=='object'||G.phase==='over')return'今は操作できません';
@@ -325,6 +330,8 @@ function apply0(G,seat,a){
     G.seq++;return null}
   if(t==='post'){if(G.phase==='setup')return'まだ掲示できません';const give=cleanBag(a.give),want=cleanBag(a.want);if(!give||!want)return'渡すものと欲しいものを選んでください';if(!canPay(p,give))return'足りません';p.post={give,want};p.pt=G.tick;log(G,`${p.name}の掲示：${bagTxt(give)}を渡すので${bagTxt(want)}が欲しい`);G.seq++;return null}
   if(t==='unpost'){p.post=null;G.seq++;return null}
+  if(t==='ev'){const err=evStep(G,seat,p,a);if(err)return err;G.seq++;return null}
+  if(G.ev)return'みんなのミニゲームの最中です';
   if(seat!==G.cur)return'手番ではありません';
   if(G.offer&&t!=='cancel')return'提案の返事を待っています';
   const err=step(G,seat,p,a);if(err)return err;
@@ -434,8 +441,8 @@ function mgNew(k){
   const b=railMake();return{g:'rail',grid:b.g,s:b.s,e:b.e,t0:Date.now()}}
 function mgEnd(G,p,n,msg){n=Math.max(0,Math.min(9,n));p.hand.money+=n;p.mg={done:true,n,msg};log(G,`${p.name}はミニゲームで${n}稼いだ`)}
 function mgStep(G,p,a){const m=p.mg,op=a.op;
-  if(op==='start'){if(p.mini>G.turn)return`ミニゲームはあと${p.mini-G.turn}周遊べません`;if(!['cart','trade','rail'].includes(a.g))return'知らないゲームです';p.mini=G.turn+MINI_GAP;p.mg=mgNew(a.g);return null}
-  if(op==='auto'){if(p.mini>G.turn)return'今は遊べません';if(!Number.isInteger(a.n)||a.n<0||a.n>9)return'結果が正しくありません';p.mini=G.turn+MINI_GAP;p.hand.money+=a.n;log(G,`${p.name}はミニゲームで${a.n}稼いだ`);return null}
+  if(op==='start'){if(p.mini>G.turn)return`ミニゲームはあと${p.mini-G.turn}周遊べません`;if(!['cart','trade','rail','auc','mcart'].includes(a.g))return'知らないゲームです';p.mini=G.turn+(G.target===QUICK?QUICK_GAP:MINI_GAP);if(EV[a.g]){evStart(G,G.pl.indexOf(p),a.g);return null}p.mg=mgNew(a.g);return null}
+  if(op==='auto'){if(p.mini>G.turn)return'今は遊べません';if(!Number.isInteger(a.n)||a.n<0||a.n>9)return'結果が正しくありません';p.mini=G.turn+(G.target===QUICK?QUICK_GAP:MINI_GAP);p.hand.money+=a.n;log(G,`${p.name}はミニゲームで${a.n}稼いだ`);return null}
   if(op==='close'){p.mg=null;return null}
   if(!m||m.done)return'遊んでいません';
   if(m.g==='cart'){
@@ -453,8 +460,41 @@ function mgStep(G,p,a){const m=p.mg,op=a.op;
       if(!same||!railTrace(g,m.s,m.e).ok)return'つながっていません';
       const s=(Date.now()-m.t0)/1000,q=RAIL_T.find(x=>s<=x[0]);mgEnd(G,p,q?q[1]:0,`${s.toFixed(1)}秒でつなぎました。`);return null}}
   return'知らない操作です'}
+/* みんなのミニゲーム：始めた人の手番に全員で遊ぶ。始めた人はお金2をもらう */
+const EV={auc:'競り市',mcart:'みんなの荷車'},AUC_MAX=20,EV_CAP=9,EV_HOST=2;
+const cartLim=n=>[9+n,13+n];
+function evStart(G,host,k){const id=(G.evN||0)+1,p=G.pl[host];G.evN=id;p.hand.money+=EV_HOST;
+  if(k==='auc'){const lot={},[a,b,c]=shuffle(RES.slice());lot[a]=2;lot[b]=1;lot[c]=1;G.ev={id,g:k,host,lot,bid:G.pl.map(()=>null)};log(G,`${p.name}が競り市を開いた（${bagTxt(lot)}）`)}
+  else{const[lo,hi]=cartLim(G.n);G.ev={id,g:k,host,load:0,limit:lo+Math.floor(Math.random()*(hi-lo+1)),who:host,item:CARGO[Math.floor(Math.random()*CARGO.length)],earn:G.pl.map(()=>0),out:G.pl.map(()=>false)};log(G,`${p.name}がみんなの荷車を始めた`)}}
+const evWait=G=>{const v=G.ev;return v.g==='auc'?G.pl.map((_,i)=>i).filter(i=>v.bid[i]===null):[v.who]};
+function evDone(G,lines){const v=G.ev;G.evRes={id:v.id,g:v.g,tick:G.tick,lines};G.ev=null}
+function aucEnd(G){const v=G.ev,top=Math.max(...v.bid),order=G.pl.map((_,i)=>mod(v.host+i,G.n)),bids=G.pl.map((q,i)=>`${q.name} ${v.bid[i]}`).join('、');
+  if(!top){log(G,'競り市は誰も入札せず、流れた');evDone(G,['誰も入札しませんでした。',`入札：${bids}`]);return}
+  const w=order.find(i=>v.bid[i]===top),q=G.pl[w],share=Math.floor(top/(G.n-1));
+  q.hand.money-=top;gain(q,v.lot);G.pl.forEach((x,i)=>{if(i!==w)x.hand.money+=share});
+  log(G,`${q.name}がお金${top}で競り落とした（${bagTxt(v.lot)}）。ほかの人に${share}ずつ`);
+  evDone(G,[`${q.name}がお金${top}で${bagTxt(v.lot)}を競り落としました。`,`ほかの人はお金${share}ずつもらいました。`,`入札：${bids}`])}
+function cartEnd(G,msg){const v=G.ev;G.pl.forEach((q,i)=>{q.hand.money+=v.earn[i]});
+  const got=G.pl.map((q,i)=>`${q.name} ${v.earn[i]}`).join('、');log(G,`みんなの荷車が終わった（${got}）`);evDone(G,[msg,`限界は重さ${v.limit}でした。`,`稼ぎ：${got}`])}
+function evStep(G,seat,p,a){const v=G.ev;if(!v)return'みんなのミニゲームはありません';
+  if(v.g==='auc'){if(v.bid[seat]!==null)return'もう入札しました';const b=a.n;if(!Number.isInteger(b)||b<0||b>Math.min(AUC_MAX,p.hand.money))return'入札額が正しくありません';
+    v.bid[seat]=b;if(v.bid.every(x=>x!==null))aucEnd(G);return null}
+  if(seat!==v.who)return'あなたの番ではありません';
+  if(a.op==='stop'){v.out[seat]=true;log(G,`${p.name}は荷車から降りた`)}
+  else if(a.op==='load'){const c=v.item;v.load+=c[1];
+    if(v.load>v.limit){v.earn[seat]=0;log(G,`${p.name}が${c[0]}を積んで荷車が壊れた`);cartEnd(G,`${p.name}が${c[0]}を積んだところで荷車が壊れ、${p.name}の稼ぎはなくなりました。`);return null}
+    v.earn[seat]=Math.min(EV_CAP,v.earn[seat]+c[2]);if(v.earn[seat]>=EV_CAP)v.out[seat]=true;log(G,`${p.name}が${c[0]}を積んだ（重さ${v.load}）`);v.item=CARGO[Math.floor(Math.random()*CARGO.length)]}
+  else return'知らない操作です';
+  for(let i=1;i<=G.n;i++){const j=mod(seat+i,G.n);if(!v.out[j]){v.who=j;return null}}
+  cartEnd(G,'全員が降りて、荷車は無事に着きました。');return null}
+function cpuEv(G,seat){const v=G.ev,p=G.pl[seat],L=p.cpu?(G.lv??1):2;
+  if(v.g==='auc'){const g=goalCost(G,seat),val=RES.reduce((a,r)=>a+(v.lot[r]||0)*G.mk[r]*(g[r]&&p.hand[r]<g[r]?1.3:1),0);
+    const b=L?Math.round(val*[.5,.55,.65,.7,.75][L]*(.85+Math.random()*.3)):Math.floor(Math.random()*6);return{t:'ev',n:Math.max(0,Math.min(AUC_MAX,p.hand.money,b))}}
+  const[lo]=cartLim(G.n),safe=lo+[3,1,1,2,2][L]+Math.floor(Math.random()*2);
+  return{t:'ev',op:v.load+v.item[1]<=safe?'load':'stop'}}
 /* 見せてよい情報だけに絞る（サーバー版） */
-function viewFor(G,seat){if(G.phase==='over')return G;const v=JSON.parse(JSON.stringify(G));v.deck=v.deck.map(()=>'?');
+function viewFor(G,seat){useB(G);if(G.phase==='over')return G;const v=JSON.parse(JSON.stringify(G));v.deck=v.deck.map(()=>'?');
+  if(v.ev){if(v.ev.g==='auc')v.ev.bid=v.ev.bid.map((b,i)=>i===seat||b===null?b:-1);delete v.ev.limit}
   v.pl.forEach((p,i)=>{if(i!==seat){p.cards=p.cards.map(c=>({k:'?',t:c.t}));p.mg=null}else if(p.mg){delete p.mg.limit;if(p.mg.nx)p.mg.nx={tip:p.mg.nx.tip}}});return v}
 /* ---- CPU ---- */
 function nodeScore(G,n,o){const B=getB(),have=new Set();G.nodes.forEach((b,i)=>{if(b&&b.o===o)B.NF[i].forEach(f=>have.add(G.faces[f]))});
@@ -474,12 +514,13 @@ function goalPick(G,o){const p=G.pl[o],c=[],late=Math.max(...G.pl.map((_,i)=>pub
   if(p.ord<LIMIT.ord)for(let k=0;k<5;k++)if(visit(G,o,k)&&G.orders[k])c.push({x:G.orders[k],v:late?1.2:.9});
   if(!c.length)return null;return best(c,q=>q.v*(late?1:1)-miss(q.x)*.5).x}
 function goalCost(G,o){{const h=hoardTarget(G,o);if(h)return CARD[h].p}if(G.pl[o].cpu){const g=goalPick(G,o);if(g)return g}if(legalFac(G,o).length&&count(G,o,'o')<LIMIT.fac&&count(G,o,'s')>=2)return COST.fac;if(legalSt(G,o).length&&count(G,o,'s')<LIMIT.st)return COST.st;if(legalHuts(G,o).length&&count(G,o,'h')<LIMIT.hut)return COST.hut;return COST.rail}
-function cpuRespond(G,seat){const o=G.offer,p=G.pl[seat],L=p.cpu?(G.lv??1):2;if(!canPay(p,o.want))return{t:'respond',ok:false};
+function cpuRespond(G,seat){useB(G);const o=G.offer,p=G.pl[seat],L=p.cpu?(G.lv??1):2;if(!canPay(p,o.want))return{t:'respond',ok:false};
   const val=b=>KEYS.reduce((a,r)=>a+(b[r]||0)*(r==='money'?2:G.mk[r]),0),goal=goalCost(G,seat);
   const spare=RES.every(r=>!o.want[r]||p.hand[r]-o.want[r]>=(goal[r]||0));
   const lead=pubVP(G,o.from)>=G.target-4||pubVP(G,o.from)>pubVP(G,seat)+3;return{t:'respond',ok:spare&&!lead&&val(o.give)>=val(o.want)*[.7,1,1,1.3,1.6][L]}}
-function cpuAct(G,seat){
+function cpuAct(G,seat){useB(G);
   const p=G.pl[seat],B=getB(),L=p.cpu?(G.lv??1):2;
+  if(G.ev)return cpuEv(G,seat);
   if(G.offer&&seat!==G.offer.from)return cpuRespond(G,seat);
   if(G.offer)return{t:'cancel'};
   if(G.phase==='setup'){
@@ -491,6 +532,7 @@ function cpuAct(G,seat){
     if(!G.played&&usable.some(c=>c.k==='forecast')){const c=best([1,2,3,4,5,6].flatMap(d=>RES.map(r=>({d,r}))),({d,r})=>{let v=Math.random();B.faces.forEach((f,i)=>{if(G.nums[i]===d&&G.faces[i]===r&&!blocked(G,i))f.v.forEach(n=>{const b=G.nodes[n];if(b&&b.o===seat)v+=YIELD[b.k]*(p.boost.includes(r)?2:1)})});return v});return{t:'play',k:'forecast',d:c.d,r:c.r}}
     return{t:'roll'}}
   if(G.bridge>0){const ls=legalLines(G,seat);if(ls.length)return{t:'line',k:'rail',e:lineChoice(G,seat,ls)};return{t:'end'}}
+  if(p.mini<=G.turn&&Math.random()<1/3)return{t:'mg',op:'start',g:Math.random()<.5?'auc':'mcart'};
   if(p.mini<=G.turn)return{t:'mg',op:'auto',n:L>=2?9:L?[0,3,3,6,6,9][Math.floor(Math.random()*6)]:3};
   if(Math.random()<[.3,.15,0,0,0][L])return{t:'end'};
   const ls=lines(G,seat)<LIMIT.line?legalLines(G,seat):[],hs=count(G,seat,'h')<LIMIT.hut?legalHuts(G,seat):[],hoard=G.n>2&&hoardTarget(G,seat,3);
@@ -536,6 +578,7 @@ function lineChoice(G,o,ls){const B=getB();return best(ls,e=>{let v=Math.random(
 <script id="ui">
 'use strict';
 const LANG='ja';
+const QP=document.documentElement.dataset.quick==='1';
 /* ===== 画面とオンライン ===== */
 const PC=['var(--p0)','var(--p1)','var(--p2)','var(--p3)','var(--p4)'];
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -547,7 +590,7 @@ const $=id=>document.getElementById(id);
   const s=document.createElement('style');s.textContent=k.map(n=>`.a-${n}{background-image:linear-gradient(rgba(0,0,0,0) 35%,rgba(0,0,0,.72)),url(${ART[n]});background-size:cover;background-position:center}`).join('');document.body.appendChild(s)})();
 const artC=k=>ART[k]?` a-${k}`:'';
 let G=null;
-const UI={screen:'title',lv:Math.min(4,Math.max(0,+(ls.get('goka.lv')??1)||0)),name:ls.get('goka.name')||'',code:'',msg:'',size:4,map:1,target:20,mode:null,panel:null,give:{},want:{},card:null,er:'wood',r1:'wood',r2:'iron',toast:''};
+const UI={screen:'title',lv:Math.min(4,Math.max(0,+(ls.get('goka.lv')??1)||0)),name:ls.get('goka.name')||'',code:'',msg:'',size:4,map:1,target:QP?QUICK:20,mode:null,panel:null,give:{},want:{},card:null,er:'wood',r1:'wood',r2:'iron',toast:''};
 const NET={db:null,room:null,uid:null,pid:null,ready:false,tid:null,t:null,gr:null,unsub:null,peers:[],seen:{},writing:false,pendingW:false,open:[],stats:{},aid:0,local:false,wait:null,nextCpu:0,act:{},mark:0,pinged:0};
 const SRV=!!(window.claude&&window.claude.server);
 /* --- アカウントとアバター（自前サーバーで、ログインが有効なときだけ出す） --- */
@@ -586,7 +629,7 @@ async function boot(hot){
     const m=/^#t-([a-z0-9]{5})(?:-(p\d))?$/.exec(location.hash||'');
     NET.pid=NET.uid+(!SRV&&m&&m[2]?'~'+m[2]:'');
     db.collection('stats').onSnapshot(s=>{s.docs.forEach(d=>{const x=d.data();if(x&&x.n)NET.stats[x.n]=x});soft()},()=>{});
-    db.collection('tables').where('status','==','wait').limit(30).onSnapshot(s=>{const cut=Date.now()-6*3600e3;NET.open=s.docs.map(d=>d.data()).filter(t=>t&&t.created>cut&&(t.lang==='en')===(LANG==='en'));soft()},()=>{});
+    db.collection('tables').where('status','==','wait').limit(30).onSnapshot(s=>{const cut=Date.now()-6*3600e3;NET.open=s.docs.map(d=>d.data()).filter(t=>t&&t.created>cut&&(t.lang==='en')===(LANG==='en')&&(!QP||t.target===QUICK));soft()},()=>{});
     const code=m?m[1]:ls.get('goka.table');
     if(code&&!G)resume(code,!!m)}
   render()}
@@ -675,11 +718,12 @@ function tick(){
   if(!G||G.phase==='over'||UI.screen!=='game'||!amHost()||Date.now()<NET.nextCpu)return;
   idleCheck();const auto=i=>G.pl[i].cpu||G.pl[i].afk||isAway(G.pl[i]);
   let s=null;
-  if(G.offer){const w=G.pl.map((_,i)=>i).filter(i=>i!==G.offer.from&&!G.offer.no.includes(i));s=w.find(auto);if(s===undefined){s=auto(G.offer.from)?G.offer.from:null}}
+  if(G.ev){s=waitSeats(G).find(auto);if(s===undefined)s=null}
+  else if(G.offer){const w=G.pl.map((_,i)=>i).filter(i=>i!==G.offer.from&&!G.offer.no.includes(i));s=w.find(auto);if(s===undefined){s=auto(G.offer.from)?G.offer.from:null}}
   else if(auto(G.cur))s=G.cur;
   if(s===null||s===undefined)return;
   const a=cpuAct(G,s),e=apply(G,s,a);
-  if(e&&s===G.cur&&!G.offer)apply(G,s,G.phase==='roll'?{t:'roll'}:{t:'end'});
+  if(e&&s===G.cur&&!G.offer&&!G.ev)apply(G,s,G.phase==='roll'?{t:'roll'}:{t:'end'});
   NET.mark=Date.now();NET.nextCpu=Date.now()+(a.t==='respond'?300:a.t==='earn'||a.t==='post'?100:a.t==='roll'||a.k==='forecast'?1500:750);save();render()}
 function leave(){
   clearInterval(NET.wait);if(NET.unsub){NET.unsub();NET.unsub=null}
@@ -737,7 +781,7 @@ function diceFx(){if(!G||UI.screen!=='game')return;const k=G.dA!==null?G.tick:nu
   UI.roll=Date.now()+900;clearInterval(UI.dt);UI.dt=setInterval(()=>{const on=UI.roll>Date.now(),el=document.querySelector('.dice');
     if(el&&G&&G.dA!==null){const f=diceFaces(G,on);el.querySelectorAll('b').forEach((b,i)=>{b.textContent=f[i]})}
     if(!on){clearInterval(UI.dt);el?.classList.remove('rolling');soft()}},80)}
-function render(){
+function render(){useB(UI.screen==='game'?G:null);
   if(SRV&&NET.local&&G&&G.phase==='over'&&!G.sent){G.sent=1;try{const ac=window.claude.account;if(ac&&ac.sendGame)ac.sendGame({...gameRecord(G),lang:LANG}).catch(()=>{})}catch(e){}}
   diceFx();if(G&&UI.iq!==G.seq){UI.iq=G.seq;UI.idle0=Date.now()}$('app').innerHTML=UI.screen==='game'&&G?gameView():UI.screen==='lobby'?lobbyView():UI.screen==='rules'?rulesView():titleView();
   miniDraw();const sc=!!G&&UI.screen==='game'&&G.phase==='block'&&seatOf()===G.cur;if(sc&&!UI.sc)toBoard();UI.sc=sc}
@@ -755,7 +799,7 @@ function titleView(){
       <label for="nm">名前<input id="nm" maxlength="10" value="${esc(UI.name)}" placeholder="10文字まで"></label>
       <div class="row">
                 ${sel('sz','人数',[[2,'2人'],[3,'3人'],[4,'4人'],[5,'5人']],UI.size)}
-        ${sel('tg','勝利点',[[16,'16点'],[20,'20点'],[24,'24点']],UI.target)}
+        ${sel('tg','勝利点',[[8,'8点（短時間）'],[16,'16点'],[20,'20点'],[24,'24点']],UI.target)}
       </div>
       <div><span class="sub">ソロのCPUの強さ</span><div class="row">${LV.map((n,i)=>`<button class="btn grow ${UI.lv===i?'on':''}" data-a="lv" data-v="${i}">${n}</button>`).join('')}</div>${UI.lv>=3?`<p class="sub">${UI.lv===3?'鬼はときどき物資を受け取り、人の小屋を狙って通行止めを置きます':'悪魔はほぼ狙った目を出し、毎手番に物資3つとお金3を受け取ります。勝たせる気はありません'}</p>`:''}</div>
       <div class="row">
@@ -787,6 +831,7 @@ function lobbyView(){
 function promptText(me){
   const g=G,n=g.pl[g.cur].name,mine=me===g.cur;
   if(g.phase==='over')return['対局が終わりました',''];
+  if(g.ev)return[EV[g.ev.g]+'の最中です','全員で遊んでいます'];
   if(g.offer&&g.offer.from===me)return['返事を待っています','相手が答えるまで待つか、提案を取り下げられます'];
   if(!mine)return[`${n}の手番`,g.phase==='setup'?'最初の配置をしています':g.pl[g.cur].cpu?'CPUが考えています':'操作を待っています'];
   if(g.phase==='setup')return g.step==='hut'?['小屋を置いてください','光っている点をタップします。ほかの建物の隣には置けません']:['土の道を敷いてください','いま置いた小屋から1本敷きます'];
@@ -858,6 +903,7 @@ function cardPanel(){const k=UI.card,opt=v=>RES.map(r=>`<option value="${r}" ${v
   return`<p class="sub">${CARD[k].d}</p><button class="btn main" data-a="usecard">使う</button>`}
 function rulesView(){return`<div class="rules"><h2>遊び方</h2>
   <p>正五角形の大陸で、先に勝利点（ふつうは20点）を集めた商会の勝ちです。</p>
+  <p>短時間で遊ぶなら勝利点を8点（短時間）にします。盤面が小さくなり、全員が物資を1つずつとお金8を持って始まり、ミニゲームは4周に1回遊べます。</p>
   <h3>盤面</h3><ul><li>物資は8種類です。回収できない荒地は中央の1マスだけで、荒地に触れる点には建てられません</li><li>建てられる点は、どこもちょうど3マスの物資に触れています</li><li>外周も道を通せます。外周の白い点は通過するだけで、建物は置けません</li><li>5つの角に町商人がいます</li></ul>
   <h3>はじめ</h3><ul><li>手番の順番は、対局を始めるときに毎回ランダムで決まります</li><li>順番に小屋と土の道を1組ずつ置きます。2周目は逆の順番です</li><li>2つ目の小屋に触れる3マスから最初の物資をもらいます。お金は全員4から始まります</li></ul>
   <h3>手番</h3><ul><li>サイコロを5個振ります。物資のサイコロ3個（8面）と番号のサイコロ2個（6面）です</li><li>出た物資のどれかで、出た番号のどちらかのマスに触れる建物が物資を生みます。小屋は1個、駅は2個、工場は3個です</li><li>手番の人が何ももらえなかったときは、補助金としてお金を1もらいます</li><li>行動は1手番に${AP}回までです。道、建物、町商人が行動を使います。市場、取引、契約書、権利書、ミニゲームは行動を使いません</li></ul>
@@ -870,7 +916,7 @@ function rulesView(){return`<div class="rules"><h2>遊び方</h2>
   <h3>特別な点</h3><ul><li><b>大街道</b> つながった自分の道が${ROAD_MIN}本以上で最長の人は${ROAD}点もらえます。相手の建物がある点で道は切れます。同じ長さなら今の持ち主のままです</li><li><b>測量長</b> 測量隊を${SURV_MIN}回以上使い、使った回数が最多の人は${SURV}点もらえます</li><li><b>略奪点</b> 相手の小屋を奪う、または土の道を乗っ取るたびに1点もらえます。1人${LOOT_MAX}点までで、一度もらえば消えません</li></ul>
   <h3>町商人</h3><ul><li>角のマスに触れる点まで道か建物が届くと、その町を使えます。届いていない町も、出張料お金${TRIP}を払えば1手番に1回だけ使えます</li><li><b>増産権</b>（1枚目お金16、2枚目お金24）その物資の生産が2倍になります。1人2枚まで、各町の在庫限りです</li><li><b>納品</b> 注文の物資を渡すと1点とお金${ORDER_PAY}をもらえます。1人3点までです</li></ul>
   <h3>取引</h3><ul><li>手番の人は1手番に${OFFERS}回まで全員に提案できます。最初に受けた人と成立します</li><li>取引掲示板には、手番でなくても1人1件掲示できます。手番の人が受けると成立します</li><li>手番ごとの最初の成立取引では、両者にお金1と取引実績1が入ります</li><li>取引実績が${KING_MIN}回以上で最多の人は<b>取引王</b>となり、${KING}点もらえます</li></ul>
-  <h3>お金</h3><ul><li>お金は全員4から始まります。市場の売値は買値の半分です。買うと値上がりし、売ると値下がりします</li><li>権利書はお金12で1点、1人2枚までです。契約書は綿・食料・お金2です</li><li>ミニゲームは${MINI_GAP}周に1回だけ遊べます。荷車の積み込み、七日の相場、線路つなぎから選べて、最大9稼げます</li></ul>
+  <h3>お金</h3><ul><li>お金は全員4から始まります。市場の売値は買値の半分です。買うと値上がりし、売ると値下がりします</li><li>権利書はお金12で1点、1人2枚までです。契約書は綿・食料・お金2です</li><li>ミニゲームは${MINI_GAP}周に1回だけ遊べます。荷車の積み込み、七日の相場、線路つなぎから選べて、最大9稼げます</li><li>みんなで遊ぶ「競り市」と「みんなの荷車」も選べます。始めた人はお金${EV_HOST}をもらい、全員が参加します。競り市は物資4つを全員が伏せて入札し、いちばん高い人が買って、払ったお金をほかの人で分けます。みんなの荷車は1台に順番に荷物を積み、限界を超えさせた人は稼ぎを失います</li></ul>
   <h3>契約書</h3><div class="ctrs">${Object.keys(CARD).filter(k=>!CARD[k].sp).map(k=>`<div class="${artC(k).trim()}" style="${ART[k]?'':'background:var(--sea3)'}"><b>${CARD[k].n}（${CARD[k].c}枚）</b>${CARD[k].d}</div>`).join('')}</div>
   <h3>秘伝書</h3><div class="ctrs">${Object.keys(CARD).filter(k=>CARD[k].sp).map(k=>`<div style="background:var(--sea3)"><b>${CARD[k].n}（${CARD[k].c}枚・${costTxt(CARD[k].p)}）</b>${CARD[k].d}</div>`).join('')}</div>
   <div><button class="btn main" data-a="back">戻る</button></div></div>`}
@@ -881,6 +927,9 @@ const miniBox=h=>{$('mini').innerHTML=`<div class="over"><div>${h}</div></div>`}
 function miniClear(){if(MINI.key){cancelAnimationFrame(MINI.raf);MINI.key='';$('mini').innerHTML=''}MINI.rail=null}
 function miniDraw(){
   const s=UI.screen==='game'&&G?seatOf():null,m=s!==null&&s>=0&&G.pl[s]?G.pl[s].mg:null;
+  if(!m&&s!==null&&s>=0&&G.ev){MINI.menu=false;const key='ev'+JSON.stringify(G.ev)+UI.bid;if(key===MINI.key)return;MINI.key=key;return evDraw(s)}
+  if(!m&&s!==null&&s>=0&&G.evRes&&G.evRes.tick===G.tick&&MINI.res!==G.evRes.id){MINI.menu=false;const key='res'+G.evRes.id;if(key===MINI.key)return;MINI.key=key;
+    return miniBox(`<h2>${EV[G.evRes.g]}の結果</h2>${G.evRes.lines.map(x=>`<p>${esc(x)}</p>`).join('')}<button class="btn main" data-a="e-ok">閉じる</button>`)}
   if(!m&&!MINI.menu)return miniClear();
   if(m)MINI.menu=false;
   const key=m?JSON.stringify(m):'menu';if(key===MINI.key)return;MINI.key=key;
@@ -888,6 +937,9 @@ function miniDraw(){
     <button class="btn main" data-a="m-cart">荷車の積み込み<small>限界の分からない荷車に、どこまで積むか</small></button>
     <button class="btn main" data-a="m-trade">七日の相場<small>当たるとは限らない噂を頼りに売り買いする</small></button>
     <button class="btn main" data-a="m-rail">線路つなぎ<small>線路を回して、時間内に町までつなぐ</small></button>
+    <p class="sub">みんなで遊ぶ（始めた人はお金${EV_HOST}をもらいます）</p>
+    <button class="btn main" data-a="m-auc">競り市<small>全員が値段を伏せて入札。払ったお金はほかの人で分ける</small></button>
+    <button class="btn main" data-a="m-mcart">みんなの荷車<small>1台に順番に積む。壊した人は稼ぎを失う</small></button>
     <button class="btn" data-a="m-x">やめる</button>`);
   if(m.done){cancelAnimationFrame(MINI.raf);return miniBox(`<h2>${m.n}稼ぎました</h2><p>${esc(m.msg)}</p><button class="btn main" data-a="m-ok">受け取る</button>`)}
   if(m.g==='cart')return miniBox(`<h2>荷車の積み込み</h2><p class="sub">荷車の限界は重さ7〜12のどこかです。超えると壊れて、価値の3分の1しか残りません。</p>
@@ -901,6 +953,20 @@ function miniDraw(){
     <div class="row"><button class="btn main grow" data-a="m-buy" ${m.cash>=m.price?'':'disabled'}>1つ買う</button><button class="btn main grow" data-a="m-sell" ${m.stock?'':'disabled'}>1つ売る</button></div>
     <button class="btn" data-a="m-next">${m.day<7?'次の日へ':'相場を閉じる'}</button>`)}
   if(m.g==='rail'){if(!MINI.rail||MINI.rail.t0!==m.t0){MINI.rail={t0:m.t0,g:m.grid.slice(),s:m.s,e:m.e,start:performance.now()};MINI.sent=false}railDraw();cancelAnimationFrame(MINI.raf);MINI.raf=requestAnimationFrame(railLoop)}}
+function evDraw(s){const v=G.ev,p=G.pl[s],nm=i=>esc(G.pl[i].name);
+  if(v.g==='auc'){const mx=Math.min(AUC_MAX,p.hand.money);if(UI.bid===undefined||UI.bid>mx)UI.bid=Math.min(mx,4);
+    const st=G.pl.map((q,i)=>`<span class="tag">${nm(i)}：${v.bid[i]===null?'考え中':'入札済み'}</span>`).join(' ');
+    const mine=v.bid[s]===null?`<div class="row"><button class="btn grow" data-a="e-bm" ${UI.bid>0?'':'disabled'}>−1</button><b style="font-size:1.6em;min-width:3em;text-align:center">${UI.bid}</b><button class="btn grow" data-a="e-bp" ${UI.bid<mx?'':'disabled'}>＋1</button></div>
+      <button class="btn main" data-a="e-bid">お金${UI.bid}で入札する</button>`:`<p>お金<b>${v.bid[s]}</b>で入札しました。ほかの人を待っています。</p>`;
+    return miniBox(`<h2>競り市</h2><p class="sub">${nm(v.host)}が開きました。全員が値段を伏せて一度だけ入札し、いちばん高い人が競り落とします。払ったお金はほかの人で分けます。同じ値段なら${nm(v.host)}に近い順です。</p>
+      <p>品物：<b>${esc(bagTxt(v.lot))}</b></p><p>手持ちのお金 <b>${p.hand.money}</b>（入札は${AUC_MAX}まで）</p>${mine}<p>${st}</p>`)}
+  const[lo,hi]=cartLim(G.n),c=v.item,me=v.who===s;
+  const st=G.pl.map((q,i)=>`<span class="tag">${nm(i)}：${v.earn[i]}${v.out[i]?'（降りた）':''}</span>`).join(' ');
+  return miniBox(`<h2>みんなの荷車</h2><p class="sub">1台の荷車に順番に荷物を積み、積んだ人がその価値を稼ぎます（1人${EV_CAP}まで）。限界は重さ${lo}〜${hi}のどこかで、超えさせた人は稼ぎを失います。降りた人は稼ぎを受け取ります。</p>
+    <div class="track"><div class="zone" style="left:${lo/(hi+4)*100}%;width:${(hi-lo+1)/(hi+4)*100}%;background:var(--warn)"></div><div class="mark" style="left:${Math.min(v.load,hi+4)/(hi+4)*100}%"></div></div>
+    <p>重さ <b>${v.load}</b>　次の荷物 <b>${esc(c[0])}</b>（重さ${c[1]}・価値${c[2]}）</p>
+    ${me?`<div class="row"><button class="btn main grow" data-a="e-load">${esc(c[0])}を積む</button><button class="btn grow" data-a="e-stop">降りる<small>${v.earn[s]}を受け取る</small></button></div>`:v.out[s]?'<p>降りました。ほかの人を見守ります。</p>':`<p>${nm(v.who)}の番です</p>`}
+    <p>${st}</p>`)}
 function railSvg(){const b=MINI.rail,S=70,mid=S/2,W=S*RN4,lit=railTrace(b.g,b.s,b.e).lit;
   const pathOf=m=>{const p={1:[mid,0],2:[S,mid],4:[mid,S],8:[0,mid]},k=[1,2,4,8].filter(x=>m&x);return`M${p[k[0]]}Q${mid},${mid} ${p[k[1]]}`};let h='';
   b.g.forEach((m,i)=>{const x=(i%RN4)*S,y=Math.floor(i/RN4)*S;h+=`<g transform="translate(${x} ${y})" data-a="m-tile" data-i="${i}" style="cursor:pointer"><rect x="2" y="2" width="${S-4}" height="${S-4}" rx="6" fill="var(--sea)" stroke="var(--line)"/><path d="${pathOf(m)}" fill="none" stroke="${lit.includes(i)?'var(--brass)':'var(--mute)'}" stroke-width="11"/></g>`});
@@ -941,7 +1007,8 @@ document.addEventListener('click',e=>{
     fd(){UI.fd=+d.d;render()},fr(){UI.fr=d.r;render()},
     forecast(){const c={t:'play',k:'forecast',d:UI.fd,r:UI.fr};UI.card=null;UI.fd=UI.fr=null;act(c)},
     import(){UI.card=null;act({t:'play',k:'import',r:[UI.r1,UI.r2]})},
-    mini(){MINI.menu=true;render()},'m-x'(){MINI.menu=false;render()},'m-cart'(){act({t:'mg',op:'start',g:'cart'})},'m-trade'(){act({t:'mg',op:'start',g:'trade'})},'m-rail'(){act({t:'mg',op:'start',g:'rail'})},'m-pick'(){act({t:'mg',op:'pick',i:+d.i})},'m-go'(){act({t:'mg',op:'go'})},'m-buy'(){act({t:'mg',op:'buy'})},'m-sell'(){act({t:'mg',op:'sell'})},'m-next'(){act({t:'mg',op:'next'})},'m-tile'(){railTap(+d.i)},'m-ok'(){act({t:'mg',op:'close'})},
+    mini(){MINI.menu=true;render()},'m-x'(){MINI.menu=false;render()},'m-cart'(){act({t:'mg',op:'start',g:'cart'})},'m-trade'(){act({t:'mg',op:'start',g:'trade'})},'m-rail'(){act({t:'mg',op:'start',g:'rail'})},'m-auc'(){act({t:'mg',op:'start',g:'auc'})},'m-mcart'(){act({t:'mg',op:'start',g:'mcart'})},
+    'e-bm'(){UI.bid=Math.max(0,UI.bid-1);render()},'e-bp'(){UI.bid++;render()},'e-bid'(){act({t:'ev',n:UI.bid})},'e-load'(){act({t:'ev',op:'load'})},'e-stop'(){act({t:'ev',op:'stop'})},'e-ok'(){MINI.res=G.evRes&&G.evRes.id;render()},'m-pick'(){act({t:'mg',op:'pick',i:+d.i})},'m-go'(){act({t:'mg',op:'go'})},'m-buy'(){act({t:'mg',op:'buy'})},'m-sell'(){act({t:'mg',op:'sell'})},'m-next'(){act({t:'mg',op:'next'})},'m-tile'(){railTap(+d.i)},'m-ok'(){act({t:'mg',op:'close'})},
     quit(){act({t:'resign'});setTimeout(leave,700)}};
   if(go[a])go[a]();if(!a.startsWith('m-')&&a!=='mini')soft()});
 const DEMO={};
