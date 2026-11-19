@@ -129,6 +129,12 @@ async function api(req, res, url) {
     if (!a || !STATS_EMAILS.includes(String(a.email).toLowerCase())) return out(403, { err: 'forbidden' });
     return out(200, { games: await listGames() });
   }
+  if (url === '/api/visits' && req.method === 'GET') {
+    const a = await userFromToken(String(req.headers.authorization || '').replace(/^Bearer\s+/i, ''));
+    if (!a || !STATS_EMAILS.includes(String(a.email).toLowerCase())) return out(403, { err: 'forbidden' });
+    const days = [...docs.entries()].filter(([k]) => k.startsWith('priv/visits-')).map(([, v]) => ({ day: v.day, views: v.views, people: v.people, ref: v.ref })).sort((x, y) => x.day < y.day ? 1 : -1);
+    return out(200, { days });
+  }
   if (req.method !== 'POST') return out(405, { err: 'method' });
   const ip = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
   let d; try { d = await readJson(req, url === '/api/avatar' ? 4e6 : 8192); } catch (e) { return out(400, { err: e.message }); }
@@ -333,13 +339,14 @@ function tickTable(t) {
   }
   const auto = i => { const p = G.pl[i]; return p.cpu || p.afk || (!on.has(p.uid) && now - (L.seen[p.uid] || L.since) > AWAY_MS); };
   let s = null;
-  if (G.offer) {
+  if (G.ev) { s = E.waitSeats(G).find(auto); if (s === undefined) s = null; }
+  else if (G.offer) {
     const w = G.pl.map((_, i) => i).filter(i => i !== G.offer.from && !G.offer.no.includes(i));
     s = w.find(auto); if (s === undefined) s = auto(G.offer.from) ? G.offer.from : null;
   } else if (auto(G.cur)) s = G.cur;
   if (s === null || s === undefined) return;
   const X = eng(t), a = X.cpuAct(G, s), e = X.apply(G, s, a);
-  if (e && s === G.cur && !G.offer) X.apply(G, s, G.phase === 'roll' ? { t: 'roll' } : { t: 'end' });
+  if (e && s === G.cur && !G.offer && !G.ev) X.apply(G, s, G.phase === 'roll' ? { t: 'roll' } : { t: 'end' });
   L.nextCpu = now + (a.t === 'respond' ? 300 : a.t === 'roll' || a.k === 'forecast' ? 1500 : 750);
   afterMove(t);
 }
@@ -361,7 +368,7 @@ function createTable(c, p, d) {
   if (Date.now() - c.lastTable < 3000) return 'too_fast';
   let n = 0; for (const k of docs.keys()) if (k.startsWith('tables/')) n++;
   if (n >= MAX_TABLES) return 'full';
-  const size = [2, 3, 4, 5].includes(d.size) ? d.size : 4, target = [16, 20, 24].includes(d.target) ? d.target : 20;
+  const size = [2, 3, 4, 5].includes(d.size) ? d.size : 4, target = [8, 16, 20, 24].includes(d.target) ? d.target : 20;
   if (AUTH && !c.acct && d.lang !== 'en') return 'login';   // 英語版の部屋はログインなし
   const name = cleanName(d.seats && d.seats[0] && d.seats[0].name);
   c.lastTable = Date.now();
@@ -373,6 +380,8 @@ function handle(c, m) {
   const ng = err => c.send({ t: 'res', id: m.id, ok: false, err });
   if (m.op === 'hello') {
     const { uid, secret } = m;
+    const helloLang = m.lang === 'en' ? 'en' : 'ja';
+    if (!c.counted) { c.counted = true; setTimeout(() => { try { countPerson(c.uid, helloLang); } catch (e) {} }, 3000); }
     if (AUTH && m.token) {
       userFromToken(m.token).then(acct => {
         if (!acct) { c.uid = null; c.acct = null; return helloGuest(true); }
@@ -398,6 +407,7 @@ function handle(c, m) {
   switch (m.op) {
     case 'get':
       if (!segs || segs.length !== 2) return ng('bad_path');
+      if (segs[0] === 'priv') return ng('permission_denied');
       return ok(docSnap(c, m.path));
     case 'set': {
       if (!segs || segs.length !== 2 || segs[0] !== 'tables' || !isObj(m.data)) return ng('permission_denied');
@@ -406,6 +416,7 @@ function handle(c, m) {
     case 'update': case 'delete': return ng('permission_denied');
     case 'sub': {
       if (!segs || typeof m.sub !== 'string') return ng('bad_path');
+      if (segs[0] === 'priv') return ng('permission_denied');
       const q = segs.length === 2 ? { kind: 'doc', path: m.path }
         : { kind: 'col', path: m.path, limit: Math.min(1000, Number(m.limit) || 0) || 0, where: Array.isArray(m.where) ? m.where.filter(w => Array.isArray(w) && w.length === 3).slice(0, 5) : null };
       c.subs.set(m.sub, q); ok(true); sendSnap(c, m.sub, q); return;
@@ -413,6 +424,7 @@ function handle(c, m) {
     case 'unsub': c.subs.delete(m.sub); return ok(true);
     case 'qget':
       if (!segs || segs.length !== 1) return ng('bad_path');
+      if (segs[0] === 'priv') return ng('permission_denied');
       return ok(colSnap(c, { path: m.path, limit: m.limit, where: m.where }));
     case 'join':
       if (typeof m.room !== 'string' || m.room.length > 80) return ng('bad_room');
@@ -436,9 +448,38 @@ function handle(c, m) {
   }
 }
 
+// ---------- 来た数と来た元（個人は残さない。priv/ は持ち主だけが /api/visits で見られる） ----------
+const BOT = /bot|crawl|spider|slurp|curl|wget|python|go-http|node-fetch|axios|headless|preview|facebookexternalhit|render/i;
+const dayJST = () => new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
+function visitDoc() { const k = 'priv/visits-' + dayJST(); let v = docs.get(k); if (!v) { v = { day: dayJST(), views: { ja: 0, en: 0 }, people: { ja: 0, en: 0 }, ref: {}, seen: [] }; docs.set(k, v); } return [k, v]; }
+function refOf(req) {
+  const q = new URL(req.url, 'http://x').searchParams, tag = q.get('ref') || q.get('utm_source');
+  if (tag) { const t = String(tag).toLowerCase().replace(/[^a-z0-9._-]/g, '').slice(0, 30); return /^itch/.test(t) ? 'itch.io' : /^(x|twitter)$/.test(t) ? 'x' : t || 'other'; }
+  let h = ''; try { h = new URL(String(req.headers.referer || '')).hostname.toLowerCase(); } catch (e) {}
+  if (!h) return 'direct';
+  if (h === String(req.headers.host || '').split(':')[0]) return null;   // 自分のサイト内の移動は数えない
+  h = h.replace(/^www\./, '');
+  if (/(^|\.)itch\.io$|(^|\.)itch\.zone$/.test(h)) return 'itch.io';
+  if (/^(t\.co|x\.com|twitter\.com)$/.test(h)) return 'x';
+  if (/(^|\.)google\./.test(h)) return 'google';
+  if (/(^|\.)facebook\.com$|(^|\.)instagram\.com$/.test(h)) return h.includes('insta') ? 'instagram' : 'facebook';
+  return h.slice(0, 40);
+}
+function countView(req, lang) {
+  if (BOT.test(String(req.headers['user-agent'] || ''))) return;
+  const [k, v] = visitDoc(); v.views[lang]++;
+  const r = refOf(req); if (r) { const key = lang + ':' + r; if (v.ref[key] !== undefined || Object.keys(v.ref).length < 200) v.ref[key] = (v.ref[key] || 0) + 1; }
+  scheduleSave();
+}
+function countPerson(uid, lang) {
+  if (!uid) return; const [k, v] = visitDoc();
+  const h = crypto.createHash('sha256').update(String(uid)).digest('hex').slice(0, 10) + (lang === 'en' ? 'e' : 'j');
+  if (v.seen.includes(h)) return; if (v.seen.length < 20000) v.seen.push(h); v.people[lang === 'en' ? 'en' : 'ja']++; scheduleSave();
+}
+
 // ---------- HTTP ----------
-function page(en) {
-  return '<!doctype html><html lang="' + (en ? 'en' : 'ja') + '"><head><meta charset="utf-8">' +
+function page(en, quick) {
+  return '<!doctype html><html lang="' + (en ? 'en' : 'ja') + '"' + (quick ? ' data-quick="1"' : '') + '><head><meta charset="utf-8">' +
     '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">' +
     '<style>*,*::before,*::after{box-sizing:border-box}body{margin:0}</style>' +
     '<script src="/shim.js"></script></head><body>' + (en ? HTML_EN : HTML) + '</body></html>';
@@ -446,8 +487,10 @@ function page(en) {
 const server = http.createServer((req, res) => {
   const url = req.url.split('?')[0];
   try {
-    if ((url === '/en' || url === '/en/') && HTML_EN) { res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-cache' }); return res.end(page(true)); }
-    if (url === '/' || url === '/index.html') { res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-cache' }); return res.end(page()); }
+    if ((url === '/en' || url === '/en/') && HTML_EN) { res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-cache' }); countView(req, 'en'); return res.end(page(true)); }
+    if ((url === '/en/quick' || url === '/en/quick/') && HTML_EN) { res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-cache' }); countView(req, 'en'); return res.end(page(true, true)); }
+    if (url === '/quick' || url === '/quick/') { res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-cache' }); countView(req, 'ja'); return res.end(page(false, true)); }
+    if (url === '/' || url === '/index.html') { res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-cache' }); countView(req, 'ja'); return res.end(page()); }
     if (url === '/shim.js') { res.writeHead(200, { 'content-type': 'text/javascript; charset=utf-8', 'cache-control': 'no-cache' }); return res.end(fs.readFileSync(path.join(ROOT, 'shim.js'))); }
     if (url === '/healthz') { res.writeHead(200, { 'content-type': 'text/plain' }); return res.end('ok'); }
     if (url.startsWith('/api/')) return void api(req, res, url).catch(e => { console.error('api', e); if (!res.headersSent) { res.writeHead(500); res.end('{"err":"server"}'); } });
