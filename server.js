@@ -16,7 +16,7 @@ const HTML = fs.readFileSync(path.join(ROOT, 'seigokaku.html'), 'utf8');
 const HTML_EN = fs.existsSync(path.join(ROOT, 'seigokaku.en.html')) ? fs.readFileSync(path.join(ROOT, 'seigokaku.en.html'), 'utf8') : null;
 const MAX_EMIT = 4 * 1024, MAX_TABLES = 300, AWAY_MS = 120000;
 
-const loadEngine = h => new Function(/<script id="engine">([\s\S]*?)<\/script>/.exec(h)[1] + '\nreturn{newGame,apply,cpuAct,viewFor,waitSeats,log,IDLE_MS,gameRecord};')();
+const loadEngine = h => new Function(/<script id="engine">([\s\S]*?)<\/script>/.exec(h)[1] + '\nreturn{newGame,apply,cpuAct,viewFor,waitSeats,log,IDLE_MS,gameRecord,clockTick,clkRun,CLOCK_BACK};')();
 const E = loadEngine(HTML), E_EN = HTML_EN ? loadEngine(HTML_EN) : E;
 const eng = t => (t && t.lang === 'en' ? E_EN : E);   // 英語の部屋は英語のルール文で動かす
 
@@ -321,19 +321,24 @@ function onAct(c, code, d) {
   if (seat < 0 || (d.a.t === 'mg' && d.a.op === 'auto')) return;
   const L = liveOf(code), me = t.G.pl[seat];
   L.act[c.uid] = Date.now();   // 画面に触っている間は離席にしない
-  if (me.afk) { me.afk = false; E.log(t.G, t.lang === 'en' ? `${me.name} is back` : `${me.name}が戻った`); touch(t); }
+  if (me.afk) { me.afk = false; me.clk = Math.max(me.clk ?? 0, E.CLOCK_BACK); E.log(t.G, t.lang === 'en' ? `${me.name} is back` : `${me.name}が戻った`); touch(t); }
   if (d.a.t === 'ping') return;
   if (typeof d.aid === 'string') { if (L.done.has(d.aid)) return; L.done.add(d.aid); if (L.done.size > 500) L.done.clear(); }
   if (!eng(t).apply(t.G, seat, d.a)) afterMove(t);
 }
 function tickTable(t) {
   const G = t.G, L = liveOf(t.id), now = Date.now();
+  const dt = Math.min(2000, now - (L.clkAt || now)); L.clkAt = now;   // 持ち時間を減らす（ミニゲーム中は止まる）
+  for (const i of eng(t).clockTick(G, dt)) {
+    const p = G.pl[i]; p.afk = true;
+    E.log(G, t.lang === 'en' ? `${p.name} ran out of time and is now away` : `${p.name}は持ち時間が切れて離席になった`); touch(t);
+  }
   if (now < L.nextCpu) return;
   const on = onlineUids(t.id);
   for (const u of on) L.seen[u] = now;
   for (const i of E.waitSeats(G)) {   // つながっていても操作が止まった人は離席にする
     const p = G.pl[i];
-    if (p.uid && !p.cpu && !p.afk && on.has(p.uid) && now - Math.max(L.mark || L.since, L.act[p.uid] || 0) > E.IDLE_MS) {
+    if (p.uid && !p.cpu && !p.afk && !E.clkRun(G, i) && on.has(p.uid) && now - Math.max(L.mark || L.since, L.act[p.uid] || 0) > E.IDLE_MS) {
       p.afk = true; E.log(G, t.lang === 'en' ? `${p.name} went idle and is now away` : `${p.name}は操作が止まり離席になった`); touch(t);
     }
   }
