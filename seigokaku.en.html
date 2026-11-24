@@ -156,11 +156,11 @@ const CARD={survey:{n:'Survey Team',d:'Move the Roadblock to any tile and take 1
   bond:{n:'Railway Bond',d:'Lay 2 Rails for free without using actions',c:2},
   raid:{n:'Raid Order',d:'Seize 1 opponent Hut for free. Works even without a connected road and uses no action. Also earns Plunder points',c:1},
   secret:{n:'Hidden Assets',d:'Worth 1 point just for holding it. Hidden from opponents until the end',c:3},
-  charter:{sp:1,n:'Lion\'s Seal',d:'Take over 1 opponent Station or Hut anywhere as your own. Uses no action and earns Plunder points. The leader can\'t make this',c:1,p:{wood:2,stone:2,iron:2,coal:2,cotton:2,food:2,copper:2,salt:2,money:4}},
-  embargo:{sp:1,n:'Embargo',d:'Choose 1 resource. Until your next turn, only you can produce it or buy it at the market. The leader can\'t make this',c:1,p:{iron:2,coal:2,copper:2,salt:2,money:7}},
-  fire:{sp:1,n:'Great Fire',d:'Turn 1 opponent Station back into a Hut. Works without a connected road. The leader can\'t make this',c:1,p:{wood:3,coal:2,cotton:1,food:1,money:5}},
-  wild:{sp:1,n:'Wildfire',d:'Turn 1 opponent Factory or Station back into a Hut. Works without a connected road. Stronger than Great Fire but costs more. The leader can\'t make this',c:1,p:{wood:5,coal:3,copper:3,salt:2,iron:2,money:10}},
-  shuffle:{sp:1,n:'Shuffle',d:'Pool and mix everyone\'s resources, then deal each player the same number they had. Money, Contracts and Secret Scrolls are unaffected. The leader can\'t make this',c:1,p:{cotton:2,salt:2,stone:2,money:4}}};
+  charter:{sp:1,n:'Lion\'s Seal',d:'Take over 1 opponent Station or Hut anywhere as your own. Uses no action and earns Plunder points. The leader can\'t make this',c:1,p:{wood:2,stone:2,iron:2,coal:2,cotton:1,food:1,copper:2,salt:2,money:3}},
+  embargo:{sp:1,n:'Embargo',d:'Choose 1 resource. Until your next turn, only you can produce it or buy it at the market. The leader can\'t make this',c:1,p:{iron:2,coal:2,copper:2,salt:1,money:6}},
+  fire:{sp:1,n:'Great Fire',d:'Burn one opponent Station or Hut to the ground, leaving an empty spot. Works even if your roads don\'t connect. The leader can\'t make it',c:1,p:{wood:2,coal:2,cotton:1,food:1,money:4}},
+  wild:{sp:1,n:'Wildfire',d:'Burn one opponent Factory, Station or Hut to the ground, leaving an empty spot. Works even if your roads don\'t connect. Stronger than Great Fire, but costs more. The leader can\'t make it',c:1,p:{wood:4,coal:3,copper:2,salt:2,iron:2,money:9}},
+  shuffle:{sp:1,n:'Shuffle',d:'Pool and mix everyone\'s resources, then deal each player the same number they had. Money, Contracts and Secret Scrolls are unaffected. The leader can\'t make this',c:1,p:{cotton:2,salt:2,stone:1,money:3}}};
 const mod=(a,b)=>((a%b)+b)%b;
 /* マスの中でいちばん広い場所（文字を置く位置）を探す */
 function pole(poly){
@@ -247,9 +247,9 @@ function newGame(cfg){
     pl:seats.map(s=>({name:s.name,uid:s.uid||null,cpu:!!s.cpu,me:!!s.me,mg:null,deeds:0,boost:[],ord:0,mini:1,hand:cfg.start?{...cfg.start}:cfg.target===QUICK?{wood:QUICK_HAND,stone:QUICK_HAND,iron:QUICK_HAND,coal:QUICK_HAND,cotton:QUICK_HAND,food:QUICK_HAND,copper:QUICK_HAND,salt:QUICK_HAND,money:QUICK_MONEY}:{wood:0,stone:0,iron:0,coal:0,cotton:0,food:0,copper:0,salt:0,money:4},cards:[]}))}}
 const count=(G,o,k)=>G.nodes.filter(x=>x&&x.o===o&&x.k===k).length;
 const legalCharter=(G,o)=>G.nodes.map((b,n)=>b&&b.o!==o&&((b.k==='s'&&count(G,o,'s')<LIMIT.st)||(b.k==='h'&&count(G,o,'h')<LIMIT.hut))?n:-1).filter(n=>n>=0);
-const legalFire=(G,o)=>G.nodes.map((b,n)=>b&&b.o!==o&&b.k==='s'&&count(G,b.o,'h')<LIMIT.hut?n:-1).filter(n=>n>=0);
+const legalFire=(G,o)=>G.nodes.map((b,n)=>b&&b.o!==o&&(b.k==='s'||b.k==='h')?n:-1).filter(n=>n>=0);
 function doShuffle(G,seat){const pile=[],cnt=G.pl.map(q=>handN(q));G.pl.forEach(q=>RES.forEach(r=>{for(let i=0;i<q.hand[r];i++)pile.push(r);q.hand[r]=0}));shuffle(pile);let j=0;G.pl.forEach((q,i)=>{for(let c=0;c<cnt[i];c++)q.hand[pile[j++]]++})}
-const legalWild=(G,o)=>G.nodes.map((b,n)=>b&&b.o!==o&&(b.k==='s'||b.k==='o')&&count(G,b.o,'h')<LIMIT.hut?n:-1).filter(n=>n>=0);
+const legalWild=(G,o)=>G.nodes.map((b,n)=>b&&b.o!==o?n:-1).filter(n=>n>=0);
 const behind=(G,o)=>G.pl.some((_,i)=>i!==o&&pubVP(G,i)>pubVP(G,o));
 const canMakeSp=(G,o,k)=>!!CARD[k]&&!!CARD[k].sp&&G.stock[k]>0&&canPay(G.pl[o],CARD[k].p)&&behind(G,o);
 const lines=(G,o)=>G.edges.filter(x=>x===o).length;
@@ -395,7 +395,7 @@ function step(G,seat,p,a){
     if(a.k==='bond'&&(!main||lines(G,seat)>=LIMIT.line))return'You can\'t use that now';
     if(a.k==='raid'&&(!main||count(G,seat,'h')>=LIMIT.hut||!legalRaid(G,seat).includes(a.n)))return'You can\'t take that Hut';
     if(a.k==='charter'&&(!main||!legalCharter(G,seat).includes(a.n)))return'You can\'t take that building';
-    if(a.k==='fire'&&(!main||!legalFire(G,seat).includes(a.n)))return'You can\'t choose that Station';
+    if(a.k==='fire'&&(!main||!legalFire(G,seat).includes(a.n)))return'You can\'t choose that building';
     if(a.k==='wild'&&(!main||!legalWild(G,seat).includes(a.n)))return'You can\'t choose that building';
     if(a.k==='embargo'&&(!main||!RES.includes(a.r)))return'Choose a resource';
     if(a.k==='shuffle'&&!main)return'You can\'t use that now';
@@ -405,8 +405,8 @@ function step(G,seat,p,a){
     else if(a.k==='import')a.r.forEach(r=>p.hand[r]++);
     else if(a.k==='bond')G.bridge=Math.min(2,LIMIT.line-lines(G,seat));
     else if(a.k==='raid'){const v=G.nodes[a.n].o;G.nodes[a.n].o=seat;log(G,`${p.name} took ${G.pl[v].name}'s Hut`);loot(G,p)}
-    else if(a.k==='wild'){const b=G.nodes[a.n],w=b.k==='o'?'Factory':'Station';b.k='h';log(G,`Wildfire: ${G.pl[b.o].name}'s ${w} reverted to a Hut`)}
-    else if(a.k==='fire'){const b=G.nodes[a.n];b.k='h';log(G,`Great Fire: ${G.pl[b.o].name}'s Station reverted to a Hut`)}
+    else if(a.k==='wild'){const b=G.nodes[a.n],w=b.k==='o'?'Factory':b.k==='s'?'Station':'Hut';G.nodes[a.n]=null;log(G,`Wildfire burned down ${G.pl[b.o].name}'s ${w}`)}
+    else if(a.k==='fire'){const b=G.nodes[a.n],w=b.k==='s'?'Station':'Hut';G.nodes[a.n]=null;log(G,`Great Fire burned down ${G.pl[b.o].name}'s ${w}`)}
     else if(a.k==='embargo'){G.emb={r:a.r,by:seat};log(G,`${RN[a.r]} imposed an Embargo. Until ${p.name}'s next turn, no one else can produce or buy`)}
     else if(a.k==='shuffle'){doShuffle(G,seat);log(G,'Everyone\'s resources were shuffled and redealt')}
     else if(a.k==='charter'){const b=G.nodes[a.n],v=b.o;b.o=seat;log(G,`${p.name} took ${G.pl[v].name}'s ${b.k==='s'?'Station':'Hut'} with the Lion's Seal`);loot(G,p)}
@@ -466,7 +466,7 @@ function mgStep(G,p,a){const m=p.mg,op=a.op;
       const s=(Date.now()-m.t0)/1000,q=RAIL_T.find(x=>s<=x[0]);mgEnd(G,p,q?q[1]:0,`Linked in ${s.toFixed(1)} seconds.`);return null}}
   return'Unknown action'}
 /* みんなのミニゲーム：始めた人の手番に全員で遊ぶ。始めた人はお金2をもらう */
-const EV={auc:'Auction',mcart:'Shared Cart'},AUC_MAX=20,EV_CAP=9,EV_HOST=4;
+const EV={auc:'Auction',mcart:'Shared Cart'},AUC_MAX=20,AUC_RATE=.75,EV_CAP=9,EV_HOST=4;
 const cartLim=n=>[9+n,13+n];
 function evStart(G,host,k){const id=(G.evN||0)+1,p=G.pl[host];G.evN=id;p.hand.money+=EV_HOST;
   if(k==='auc'){const lot={},[a,b,c]=shuffle(RES.slice());lot[a]=2;lot[b]=1;lot[c]=1;G.ev={id,g:k,host,lot,bid:G.pl.map(()=>null)};log(G,`${p.name} opened an Auction (${bagTxt(lot)})`)}
@@ -475,7 +475,7 @@ const evWait=G=>{const v=G.ev;return v.g==='auc'?G.pl.map((_,i)=>i).filter(i=>v.
 function evDone(G,lines){const v=G.ev;G.evRes={id:v.id,g:v.g,tick:G.tick,lines};G.ev=null}
 function aucEnd(G){const v=G.ev,top=Math.max(...v.bid),order=G.pl.map((_,i)=>mod(v.host+i,G.n)),bids=G.pl.map((q,i)=>`${q.name} ${v.bid[i]}`).join(', ');
   if(!top){log(G,'Nobody bid, so the Auction closed with no sale');evDone(G,['Nobody placed a bid.',`Bids: ${bids}`]);return}
-  const w=order.find(i=>v.bid[i]===top),q=G.pl[w],share=Math.floor(top/(G.n-1));
+  const w=order.find(i=>v.bid[i]===top),q=G.pl[w],share=Math.floor(top*AUC_RATE/(G.n-1));
   q.hand.money-=top;gain(q,v.lot);G.pl.forEach((x,i)=>{if(i!==w)x.hand.money+=share});
   log(G,`${q.name} won the Auction for ${top} money (${bagTxt(v.lot)}). Everyone else got ${share}`);
   evDone(G,[`${q.name} won ${bagTxt(v.lot)} for ${top} money.`,`Everyone else got ${share} money each.`,`Bids: ${bids}`])}
@@ -553,8 +553,8 @@ function cpuAct(G,seat){useB(G);
     if(canPay(p,COST.take)&&p.hand.money>=4&&lines(G,seat)<LIMIT.line&&legalTake(G,seat).length)return{t:'take',e:best(legalTake(G,seat),()=>Math.random())};
     if(ls.length&&(!hs.length||lines(G,seat)<8)){if(canPay(p,COST.rail)&&p.hand.iron>=2&&p.hand.stone>=2)return{t:'line',k:'rail',e:lineChoice(G,seat,ls)};if(canPay(p,COST.dirt))return{t:'line',k:'dirt',e:lineChoice(G,seat,ls)}}
     if(p.hand.coal>=3&&legalUpg(G,seat).length)return{t:'upg',e:legalUpg(G,seat)[0]}}
-  if(!G.played&&usable.some(c=>c.k==='wild')&&legalWild(G,seat).length)return{t:'play',k:'wild',n:best(legalWild(G,seat),n=>(G.nodes[n].k==='o'?3:1)+pubVP(G,G.nodes[n].o)*.3+(L>=3&&!G.pl[G.nodes[n].o].cpu?5:0)+Math.random()*.1)};
-  if(!G.played&&usable.some(c=>c.k==='fire')&&legalFire(G,seat).length)return{t:'play',k:'fire',n:best(legalFire(G,seat),n=>pubVP(G,G.nodes[n].o)+(L>=3&&!G.pl[G.nodes[n].o].cpu?5:0)+Math.random()*.1)};
+  if(!G.played&&usable.some(c=>c.k==='wild')&&legalWild(G,seat).length)return{t:'play',k:'wild',n:best(legalWild(G,seat),n=>YIELD[G.nodes[n].k]*1.5+pubVP(G,G.nodes[n].o)*.3+(L>=3&&!G.pl[G.nodes[n].o].cpu?5:0)+Math.random()*.1)};
+  if(!G.played&&usable.some(c=>c.k==='fire')&&legalFire(G,seat).length)return{t:'play',k:'fire',n:best(legalFire(G,seat),n=>YIELD[G.nodes[n].k]*1.5+pubVP(G,G.nodes[n].o)*.3+(L>=3&&!G.pl[G.nodes[n].o].cpu?5:0)+Math.random()*.1)};
   if(!G.played&&usable.some(c=>c.k==='embargo')){const ld=best(G.pl.map((_,i)=>i).filter(i=>i!==seat),i=>pubVP(G,i)+(L>=3&&!G.pl[i].cpu?5:0)),g=goalCost(G,ld),c=RES.filter(r=>g[r]);return{t:'play',k:'embargo',r:c.length?c[Math.floor(Math.random()*c.length)]:'iron'}}
   if(!G.played&&usable.some(c=>c.k==='shuffle')&&handN(p)*G.n<G.pl.reduce((a,q)=>a+handN(q),0))return{t:'play',k:'shuffle'};
   if(!G.played&&usable.some(c=>c.k==='charter')&&legalCharter(G,seat).length)return{t:'play',k:'charter',n:best(legalCharter(G,seat),n=>(G.nodes[n].k==='s'?2:1)+pubVP(G,G.nodes[n].o)*.3+(L>=3&&!G.pl[G.nodes[n].o].cpu?5:0)+Math.random()*.1)};
@@ -965,8 +965,8 @@ function gameView(){
 function cardPanel(){const k=UI.card,opt=v=>RES.map(r=>`<option value="${r}" ${v===r?'selected':''}>${RN[r]}</option>`).join('');
   if(k==='forecast')return`<p class="sub">${CARD.forecast.d}</p><p class="sub">Numbers</p><div class="cardrow">${[1,2,3,4,5,6].map(d=>`<button class="btn ${UI.fd===d?'on':''}" data-a="fd" data-d="${d}">${d}</button>`).join('')}</div><p class="sub">Resources</p><div class="cardrow">${RES.map(r=>`<button class="btn ${UI.fr===r?'on':''}" data-a="fr" data-r="${r}">${RN[r]}</button>`).join('')}</div><button class="btn main" data-a="forecast" ${UI.fd&&UI.fr?'':'disabled'}>Roll these</button>`;
   if(k==='import')return`<p class="sub">${CARD.import.d}</p><div class="row"><label class="grow" for="m1">1st<select id="m1">${opt(UI.r1)}</select></label><label class="grow" for="m2">2nd<select id="m2">${opt(UI.r2)}</select></label><button class="btn main" data-a="import">Take</button></div>`;
-  if(k==='wild'){const me=seatOf(),ok=legalWild(G,me).length;return`<p class="sub">${CARD.wild.d}</p><button class="btn main" data-a="wildgo" ${ok?'':'disabled'}>${UI.mode==='wild'?'Pick a glowing Factory or Station on the map':ok?'Choose a building to burn':'No buildings to choose'}</button>`}
-  if(k==='fire'){const me=seatOf(),ok=legalFire(G,me).length;return`<p class="sub">${CARD.fire.d}</p><button class="btn main" data-a="firego" ${ok?'':'disabled'}>${UI.mode==='fire'?'Pick a glowing Station on the map':ok?'Choose a Station to burn':'No Stations to choose'}</button>`}
+  if(k==='wild'){const me=seatOf(),ok=legalWild(G,me).length;return`<p class="sub">${CARD.wild.d}</p><button class="btn main" data-a="wildgo" ${ok?'':'disabled'}>${UI.mode==='wild'?'Choose a glowing building on the map':ok?'Choose a building to burn':'No buildings to choose'}</button>`}
+  if(k==='fire'){const me=seatOf(),ok=legalFire(G,me).length;return`<p class="sub">${CARD.fire.d}</p><button class="btn main" data-a="firego" ${ok?'':'disabled'}>${UI.mode==='fire'?'Pick a glowing Station or Hut on the map':ok?'Choose a building to burn':'No buildings to choose'}</button>`}
   if(k==='embargo')return`<p class="sub">${CARD.embargo.d}</p><div class="row"><label class="grow" for="em">Resource to embargo<select id="em">${opt(UI.er)}</select></label><button class="btn main" data-a="embargo">Embargo</button></div>`;
   if(k==='charter'){const me=seatOf(),ok=legalCharter(G,me).length;return`<p class="sub">${CARD.charter.d}</p><button class="btn main" data-a="chartergo" ${ok?'':'disabled'}>${UI.mode==='charter'?'Pick a glowing Station or Hut on the map':ok?'Choose a building to take':'No buildings to take'}</button>`}
   if(k==='raid'){const me=seatOf(),ok=count(G,me,'h')<LIMIT.hut&&legalRaid(G,me).length;return`<p class="sub">${CARD.raid.d}</p><button class="btn main" data-a="raidgo" ${ok?'':'disabled'}>${UI.mode==='raid'?'Pick a glowing Hut on the map':'Choose a Hut to steal'}</button>`}
@@ -980,13 +980,13 @@ function rulesView(){return`<div class="rules"><h2>How to play</h2>
   <h3>Doubles</h3><ul><li>If both number dice match, only the roller gets ${ZORO} money. If 2 or more resource dice match, they also get ${ZORO3}</li><li>The roller may move the Roadblock. The blocked tile stops producing, and the roller takes 1 resource from an opponent next to it</li><li>On number doubles, anyone holding 14 or more resources loses half</li></ul>
   <h3>Buildings</h3><div class="tbl"><table><tr><th>Building</th><th>Cost</th><th>Points</th><th>Output</th></tr>
     <tr><td>Hut</td><td>Food, Salt</td><td>1 pt</td><td>1</td></tr><tr><td>Station (from Hut)</td><td>Stone, Iron, Cotton 2, Copper, money 2</td><td>2 pts</td><td>2</td></tr><tr><td>Factory (from Station)</td><td>Iron 2, Coal, Copper 2, Salt 2, Food, money 4</td><td>3 pts</td><td>3</td></tr></table></div>
-  <ul><li>You can steal an opponent's Hut connected to your road for Food, Salt, Iron and Copper. Stations and Factories can't be stolen</li></ul>
+  <ul><li>You can have up to ${LIMIT.hut} Huts, ${LIMIT.st} Stations and ${LIMIT.fac} Factories. Upgrading a Hut to a Station frees one Hut slot</li><li>You can steal an opponent's Hut connected to your road for Food, Salt, Iron and Copper. Stations and Factories can't be stolen</li></ul>
   <h3>Roads</h3><div class="tbl"><table><tr><th>Road</th><th>Cost</th><th>Notes</th></tr>
     <tr><td>Dirt road</td><td>Wood</td><td>Cheap, but can be taken over</td></tr><tr><td>Rail</td><td>Stone, Iron</td><td>Can't be taken over</td></tr><tr><td>Upgrade to Rail</td><td>Coal</td><td>Turns your Dirt road into Rail</td></tr><tr><td>Take over</td><td>Stone, Iron, money 2</td><td>Takes an opponent's Dirt road connected to yours and turns it into Rail</td></tr></table></div>
   <h3>Bonus points</h3><ul><li><b>Grand Highway</b> The player with the longest connected road of ${ROAD_MIN} or more gets ${ROAD} pts. Opponents' buildings break a road. On a tie, the current holder keeps it</li><li><b>Chief Surveyor</b> The player who has used Survey Team the most, at least ${SURV_MIN} times, gets ${SURV} pts</li><li><b>Plunder points</b> Gain 1 pt each time you steal an opponent's Hut or take over their Dirt road. Up to ${LOOT_MAX} pts per player, and they are never lost</li></ul>
   <h3>Town merchant</h3><ul><li>Once your road or building reaches a point touching a corner tile, you can use that town. Towns you haven't reached can be used once per turn for a travel fee of ${TRIP} money</li><li><b>Boost</b> (1st costs 16 money, 2nd 24) Doubles your output of that resource. Up to 2 per player, while the town's stock lasts</li><li><b>Delivery</b> Hand over the ordered resource for 1 pt and ${ORDER_PAY} money. Up to 3 pts per player</li></ul>
   <h3>Trading</h3><ul><li>The active player can make offers to everyone up to ${OFFERS} times per turn. The first to accept gets the deal</li><li>On the Trade board, each player may post one offer, even off-turn. It completes when the active player accepts</li><li>Each turn's first completed trade gives both sides 1 money and 1 trade credit</li><li>The player with the most trade credits, at least ${KING_MIN}, becomes <b>Trade King</b> and gets ${KING} pts</li></ul>
-  <h3>Money</h3><ul><li>Everyone starts with 4 money. Market sell prices are half the buy price. Buying raises prices; selling lowers them</li><li>A Deed costs 12 money for 1 pt, up to 2 per player. A Contract costs Cotton, Food and money 2</li><li>In online games you have ${CLOCK/60000} minutes per turn. The clock resets to ${CLOCK/60000} minutes whenever the turn changes, and only runs while it's your move. It stops during mini-games. If it runs out, a CPU plays for you; tap the screen to come back with ${CLOCK_BACK/1000} seconds. The gauge under each name shows the time left</li><li>A mini-game can be played once every ${MINI_GAP} rounds. Choose from Cart, Seven-Day Market or Rail Link, and earn up to ${SOLO_MAX}</li><li>You can also choose the group games Auction and Shared Cart. Whoever starts one gets ${EV_HOST} money, and everyone takes part. In the Auction, everyone bids in secret on 4 resources; the highest bidder buys them and the money paid is shared among everyone else. In the Shared Cart, players take turns loading one cart, and whoever pushes it over the limit loses their earnings</li></ul>
+  <h3>Money</h3><ul><li>Everyone starts with 4 money. Market sell prices are half the buy price. Buying raises prices; selling lowers them</li><li>A Deed costs ${COST.deed.money} money for 1 pt, up to 2 per player. A Contract costs Cotton, Food and money 2</li><li>In online games you have ${CLOCK/60000} minutes per turn. The clock resets to ${CLOCK/60000} minutes whenever the turn changes, and only runs while it's your move. It stops during mini-games. If it runs out, a CPU plays for you; tap the screen to come back with ${CLOCK_BACK/1000} seconds. The gauge under each name shows the time left</li><li>A mini-game can be played once every ${MINI_GAP} rounds. Choose from Cart, Seven-Day Market or Rail Link, and earn up to ${SOLO_MAX}</li><li>You can also choose the group games Auction and Shared Cart. Whoever starts one gets ${EV_HOST} money, and everyone takes part. In the Auction, everyone bids in secret on 4 resources; the highest bidder buys them and ${AUC_RATE*100}% of the money paid is shared among everyone else. In the Shared Cart, players take turns loading one cart, and whoever pushes it over the limit loses their earnings</li></ul>
   <h3>Contracts</h3><div class="ctrs">${Object.keys(CARD).filter(k=>!CARD[k].sp).map(k=>`<div class="${artC(k).trim()}" style="${ART[k]?'':'background:var(--sea3)'}"><b>${CARD[k].n} (${CARD[k].c} cards)</b>${CARD[k].d}</div>`).join('')}</div>
   <h3>Secret Scrolls</h3><div class="ctrs">${Object.keys(CARD).filter(k=>CARD[k].sp).map(k=>`<div style="background:var(--sea3)"><b>${CARD[k].n} (${CARD[k].c} cards · ${costTxt(CARD[k].p)})</b>${CARD[k].d}</div>`).join('')}</div>
   <div><button class="btn main" data-a="back">Back</button></div></div>`}
@@ -997,7 +997,7 @@ const miniBox=h=>{$('mini').innerHTML=`<div class="over"><div>${h}</div></div>`}
 function miniClear(){if(MINI.key){cancelAnimationFrame(MINI.raf);MINI.key='';$('mini').innerHTML=''}MINI.rail=null}
 function miniDraw(){
   const s=UI.screen==='game'&&G&&!UI.cov?seatOf():null,m=s!==null&&s>=0&&G.pl[s]?G.pl[s].mg:null;
-  if(!m&&s!==null&&s>=0&&G.ev){MINI.menu=false;const key='ev'+JSON.stringify(G.ev)+UI.bid;if(key===MINI.key)return;MINI.key=key;return evDraw(s)}
+  if(!m&&s!==null&&s>=0&&G.ev){MINI.menu=false;const key='ev'+s+JSON.stringify(G.ev)+UI.bid;if(key===MINI.key)return;MINI.key=key;return evDraw(s)}
   if(!m&&s!==null&&s>=0&&G.evRes&&G.evRes.tick===G.tick&&MINI.res!==G.evRes.id){MINI.menu=false;const key='res'+G.evRes.id;if(key===MINI.key)return;MINI.key=key;
     return miniBox(`<h2>${EV[G.evRes.g]} results</h2>${G.evRes.lines.map(x=>`<p>${esc(x)}</p>`).join('')}<button class="btn main" data-a="e-ok">Close</button>`)}
   if(!m&&!MINI.menu)return miniClear();
@@ -1008,7 +1008,7 @@ function miniDraw(){
     <button class="btn main" data-a="m-trade">Seven-Day Market<small>Buy and sell on rumors that aren't always right</small></button>
     <button class="btn main" data-a="m-rail">Rail Link<small>Rotate track to reach the town in time</small></button>
     <p class="sub">Play together (whoever starts gets ${EV_HOST} money)</p>
-    <button class="btn main" data-a="m-auc">Auction<small>Everyone bids in secret. The money paid is shared among the others</small></button>
+    <button class="btn main" data-a="m-auc">Auction<small>Everyone bids in secret. ${AUC_RATE*100}% of the money paid is shared among the others</small></button>
     <button class="btn main" data-a="m-mcart">Shared Cart<small>Take turns loading one cart. Break it and lose your earnings</small></button>
     <button class="btn" data-a="m-x">Cancel</button>`);
   if(m.done){cancelAnimationFrame(MINI.raf);return miniBox(`<h2>Earned ${m.n}</h2><p>${esc(m.msg)}</p><button class="btn main" data-a="m-ok">Collect</button>`)}
@@ -1024,11 +1024,11 @@ function miniDraw(){
     <button class="btn" data-a="m-next">${m.day<7?'Next day':'Close market'}</button>`)}
   if(m.g==='rail'){if(!MINI.rail||MINI.rail.t0!==m.t0){MINI.rail={t0:m.t0,g:m.grid.slice(),s:m.s,e:m.e,start:performance.now()};MINI.sent=false}railDraw();cancelAnimationFrame(MINI.raf);MINI.raf=requestAnimationFrame(railLoop)}}
 function evDraw(s){const v=G.ev,p=G.pl[s],nm=i=>esc(G.pl[i].name);
-  if(v.g==='auc'){const mx=Math.min(AUC_MAX,p.hand.money);if(UI.bid===undefined||UI.bid>mx)UI.bid=Math.min(mx,4);
+  if(v.g==='auc'){const mx=Math.min(AUC_MAX,p.hand.money);const bk=v.id+":"+s;if(UI.bidK!==bk){UI.bidK=bk;UI.bid=undefined}if(UI.bid===undefined||UI.bid>mx)UI.bid=Math.min(mx,4);
     const st=G.pl.map((q,i)=>`<span class="tag">${nm(i)}: ${v.bid[i]===null?'thinking':'bid placed'}</span>`).join(' ');
     const mine=v.bid[s]===null?`<div class="row"><button class="btn grow" data-a="e-bm" ${UI.bid>0?'':'disabled'}>−1</button><b style="font-size:1.6em;min-width:3em;text-align:center">${UI.bid}</b><button class="btn grow" data-a="e-bp" ${UI.bid<mx?'':'disabled'}>+1</button></div>
       <button class="btn main" data-a="e-bid">Bid ${UI.bid} money</button>`:`<p>You bid <b>${v.bid[s]}</b> money. Waiting for the others.</p>`;
-    return miniBox(`<h2>Auction</h2><p class="sub">Opened by ${nm(v.host)}. Everyone bids once in secret, and the highest bid wins. The money paid is shared among everyone else. Ties go to the player closest after ${nm(v.host)} in turn order.</p>
+    return miniBox(`<h2>Auction</h2><p class="sub">Opened by ${nm(v.host)}. Everyone bids once in secret, and the highest bid wins. ${AUC_RATE*100}% of the money paid is shared among everyone else; the rest is lost. Ties go to the player closest after ${nm(v.host)} in turn order.</p>
       <p>Lot: <b>${esc(bagTxt(v.lot))}</b></p><p>Your money <b>${p.hand.money}</b> (bids up to ${AUC_MAX})</p>${mine}<p>${st}</p>`)}
   const[lo,hi]=cartLim(G.n),c=v.item,me=v.who===s;
   const st=G.pl.map((q,i)=>`<span class="tag">${nm(i)}: ${v.earn[i]}${v.out[i]?' (off)':''}</span>`).join(' ');
